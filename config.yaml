@@ -1,5 +1,0 @@
-steam:
-  shortcuts:
-    # path: /mnt/c/Program Files (x86)/Steam/userdata/1642598605/config
-    path: /home/jonn/app/nexus
-    fileName: shortcuts.vdf
