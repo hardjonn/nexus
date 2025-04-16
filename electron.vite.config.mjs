@@ -1,21 +1,29 @@
-import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import vue from '@vitejs/plugin-vue'
-import tailwindcss from '@tailwindcss/vite'
+import { resolve } from 'path';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin(), tailwindcss()]
+    plugins: [externalizeDepsPlugin()],
+    // build: {
+    //   rollupOptions: {
+    //     external: ['electron-store'],
+    //   },
+    //   output: {
+    //     format: 'es',
+    //   },
+    // },
   },
   preload: {
-    plugins: [externalizeDepsPlugin(), tailwindcss()]
+    plugins: [externalizeDepsPlugin()],
   },
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
-      }
+        '@renderer': resolve('src/renderer/src'),
+      },
     },
-    plugins: [vue()]
-  }
-})
+    plugins: [vue(), tailwindcss()],
+  },
+});
