@@ -148,8 +148,13 @@ const schema = {
 
 const conf = new Conf({ schema: schema, defaults: defaultConfig });
 
-function saveConfig(key, value) {
-  conf.set(key, value);
+function saveConfig(configData) {
+  conf.set('db', configData.db);
+  conf.set('steam', configData.steam);
+  conf.set('nas', configData.nas);
+  conf.set('client', configData.client);
+
+  return true;
 }
 
 function getConfig() {

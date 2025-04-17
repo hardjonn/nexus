@@ -3,7 +3,7 @@ import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
-import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig } from './conf';
+import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
 
 function createWindow() {
   // retrieve the window bounds from the config
@@ -113,11 +113,11 @@ ipcMain.handle('config/get', async () => {
   return getConfig();
 });
 
+ipcMain.handle('config/save', async (event, configData) => {
+  return saveConfig(configData);
+});
+
 ipcMain.on('config/save/app/active_tab', (event, tabName) => {
   console.log('on.config/save/app/active_tab: tabName:', tabName);
   saveConfigApp_ActiveTab(tabName);
 });
-
-// ipcMain.handle('conf-set', (event, key, value) => {
-//   conf.set(key, value);
-// });
