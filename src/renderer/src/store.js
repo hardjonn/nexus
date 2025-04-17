@@ -30,14 +30,27 @@ const store = reactive({
     games_lib_path: 'Games',
     prefixes_path: '',
   },
+
+  app: {
+    active_tab: 'config',
+  },
+
+  setActiveTab(tabName) {
+    this.app.active_tab = tabName;
+    console.log('Activating Tab:', tabName);
+
+    // make an ipc call to the main process to set the active tab
+    window.conf.saveConfigApp_ActiveTab(tabName);
+  },
 });
 
 window.conf.getConfig().then((config) => {
-  console.log('config', config);
+  console.log('Received Config from the main process:', config);
   store.db = config.db;
   store.steam = config.steam;
   store.nas = config.nas;
   store.client = config.client;
+  store.app = config.app;
 });
 
 export { store };

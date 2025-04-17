@@ -30,6 +30,7 @@ const defaultConfig = {
       width: 1200,
       height: 800,
     },
+    active_tab: 'config',
   },
 };
 
@@ -136,6 +137,10 @@ const schema = {
             },
           },
         },
+        active_tab: {
+          type: 'string',
+          default: null,
+        },
       },
     },
   },
@@ -153,6 +158,7 @@ function getConfig() {
     steam: conf.get('steam'),
     nas: conf.get('nas'),
     client: conf.get('client'),
+    app: conf.get('app'),
   };
 }
 
@@ -164,4 +170,8 @@ function saveConfigApp_WindowBounds(bounds) {
   conf.set('app.window_bounds', bounds);
 }
 
-export { saveConfig, getConfig, getConfigApp_WindowBounds, saveConfigApp_WindowBounds };
+function saveConfigApp_ActiveTab(tabName) {
+  conf.set('app.active_tab', tabName);
+}
+
+export { saveConfig, getConfig, getConfigApp_WindowBounds, saveConfigApp_ActiveTab, saveConfigApp_WindowBounds };

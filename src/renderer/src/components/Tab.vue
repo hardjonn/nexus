@@ -1,6 +1,13 @@
 <script setup>
+import { defineProps } from 'vue';
+import { store } from './../store.js';
+
 defineProps({
   title: {
+    type: String,
+    required: true,
+  },
+  name: {
     type: String,
     required: true,
   },
@@ -10,6 +17,8 @@ defineProps({
 <template>
   <!-- tab component needs a single root to be movable -->
   <div>
-    <slot />
+    <div v-show="store.app.active_tab == name" class="flex flex-col">
+      <slot />
+    </div>
   </div>
 </template>

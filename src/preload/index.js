@@ -7,6 +7,7 @@ const api = {};
 const conf = {
   getConfig: () => electronAPI.ipcRenderer.invoke('config/get'),
   saveConfig: (configData) => electronAPI.ipcRenderer.invoke('config/save', configData),
+  saveConfigApp_ActiveTab: (tabName) => electronAPI.ipcRenderer.send('config/save/app/active_tab', tabName),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

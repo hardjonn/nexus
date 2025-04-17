@@ -1,19 +1,33 @@
 <script setup>
-import { ref, useSlots, computed } from 'vue';
+import { useSlots } from 'vue';
+import { store } from './../store.js';
 
-const active = ref(0);
 const slots = useSlots().default();
 
-const transform = computed(() => `translate3d(-${active.value * 100}%, 0px, 0px)`);
+const markActive = (tabName) => {
+  // store the active tab in the store
+  // this will be used to show the active tab in the UI
+  // and to load the correct tab when the app is restarted
+  store.setActiveTab(tabName);
+};
 </script>
 
 <template>
-  <div class="overflow-hidden">
-    <span v-for="(slot, index) in slots" :key="index" @click="active = index">
-      {{ slot.props.title }}
+  <div class="text-sm font-medium text-center text-gray-500 rounded-lg shadow-sm sm:flex dark:divide-gray-700 dark:text-gray-400">
+    <span v-for="(slot, index) in slots" :key="index" class="w-full focus-within:z-10" @click="markActive(slot.props.name)">
+      <a
+        href="#"
+        class="inline-block w-full p-4 text-gray-900 bg-gray-100 border-r border-gray-200 dark:border-gray-700 rounded-s-lg focus:ring-4 focus:ring-blue-300 active focus:outline-none dark:bg-gray-700 dark:text-white"
+        :class="{
+          'text-gray-900 bg-gray-100 rounded-s-lg active dark:bg-gray-700 dark:text-white ring-blue-300': slot.props.name === store.app.active_tab,
+          'border-b border-gray-200 dark:border-gray-700': slot.props.name !== store.app.active_tab,
+        }"
+        aria-current="page"
+        >{{ slot.props.title }}</a
+      >
     </span>
-    <div class="flex transition-transform [&>*]:w-full [&>*]:shrink-0" :style="{ transform }">
-      <slot />
-    </div>
+  </div>
+  <div>
+    <slot />
   </div>
 </template>

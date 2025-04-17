@@ -1,20 +1,15 @@
 <script setup>
-// import { ref } from 'vue';
 import Config from './components/Config.vue';
 import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
-
-// const activeTab = ref(0);
-
-// const ipcHandle = () => window.electron.ipcRenderer.send('ping')
 </script>
 
 <template>
   <div>
     <Tabs>
-      <Tab title="Config"><Config /></Tab>
-      <Tab title="Remote Game Library">Remote Game lib</Tab>
-      <Tab title="Local Game Library">Local Game lib</Tab>
+      <Tab title="Config" name="config"><Config /></Tab>
+      <Tab title="Remote Game Library" name="remote-game-lib">Remote Game lib content</Tab>
+      <Tab title="Local Game Library" name="local-game-lib">Local Game lib content</Tab>
     </Tabs>
   </div>
 </template>

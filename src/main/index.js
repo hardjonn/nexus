@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
-import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, getConfig } from './conf';
+import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig } from './conf';
 
 function createWindow() {
   // retrieve the window bounds from the config
@@ -105,6 +105,11 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle('config/get', async () => {
   return getConfig();
+});
+
+ipcMain.on('config/save/app/active_tab', (event, tabName) => {
+  console.log('on.config/save/app/active_tab: tabName:', tabName);
+  saveConfigApp_ActiveTab(tabName);
 });
 
 // ipcMain.handle('conf-set', (event, key, value) => {
