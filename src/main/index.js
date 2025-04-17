@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
+const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig } from './conf';
 
 function createWindow() {
@@ -71,6 +72,11 @@ function createWindow() {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron');
+
+  // Install `Vue.js devtools` extension
+  installExtension(VUEJS_DEVTOOLS)
+    .then((ext) => console.log(`InstallExtension: Added Extension: ${ext.name}`))
+    .catch((err) => console.log('InstallExtension: Failed with:', err));
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
