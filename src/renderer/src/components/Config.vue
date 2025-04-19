@@ -1,5 +1,5 @@
 <script setup>
-import { ref, toRaw } from 'vue';
+import { ref, toRaw, computed } from 'vue';
 import { store } from './../store.js';
 
 console.log('Config component loaded: ', store);
@@ -7,6 +7,10 @@ console.log('Config component loaded: ', store);
 const saving = ref(false);
 const lastError = ref(null);
 const lastSuccess = ref(null);
+
+const vdfFullPath = computed(() => {
+  return `${store.steam.user_config_path}/${store.steam.user_id}/config/${store.steam.shortcuts_filename}`;
+});
 
 const saveOptions = () => {
   const configData = {
@@ -153,6 +157,15 @@ const saveOptions = () => {
           placeholder="shortcuts.vdf"
           required
         />
+      </div>
+      <div>
+        <label for="steam_shortcuts_full_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Steam Shortcuts Full Path Ref</label>
+        <div
+          id="steam_shortcuts_full_path"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        >
+          {{ vdfFullPath }}
+        </div>
       </div>
     </div>
 
