@@ -27,7 +27,7 @@ const saveOptions = () => {
   console.log('Saving config: ', configData);
 
   try {
-    window.conf
+    window.confAPI
       .saveConfig(configData)
       .then(() => {
         console.log('Config saved successfully');
@@ -181,6 +181,28 @@ const saveOptions = () => {
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="nas.host"
+          required
+        />
+      </div>
+      <div>
+        <label for="nas_user" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote User (SSH)</label>
+        <input
+          id="nas_user"
+          v-model="store.nas.user"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="nas.user"
+          required
+        />
+      </div>
+      <div>
+        <label for="nas_private_key_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote Private Key Path (SSH)</label>
+        <input
+          id="nas_private_key_path"
+          v-model="store.nas.private_key_path"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="/home/user/.ssh/id_rsa"
           required
         />
       </div>
