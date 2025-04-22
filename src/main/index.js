@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
+import { getGames } from './games';
 
 function createWindow() {
   // retrieve the window bounds from the config
@@ -120,4 +121,8 @@ ipcMain.handle('config/save', async (event, configData) => {
 ipcMain.on('config/save/app/active_tab', (event, tabName) => {
   console.log('on.config/save/app/active_tab: tabName:', tabName);
   saveConfigApp_ActiveTab(tabName);
+});
+
+ipcMain.handle('games/get', async () => {
+  return getGames();
 });

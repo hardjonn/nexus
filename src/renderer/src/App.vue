@@ -2,14 +2,20 @@
 import Config from './components/Config.vue';
 import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
+import GamesList from './components/GamesList.vue';
 </script>
 
 <template>
   <div>
     <Tabs>
       <Tab title="Config" name="config"><Config /></Tab>
-      <Tab title="Remote Game Library" name="remote-game-lib">Remote Game lib content</Tab>
-      <Tab title="Local Game Library" name="local-game-lib">Local Game lib content</Tab>
+      <Tab title="Games Library" name="games-lib">
+        <Suspense>
+          <GamesList />
+          <template #fallback> Loading games... </template>
+        </Suspense>
+      </Tab>
+      <Tab title="Local Game Library" name="local-game-lib"> not implemented yet </Tab>
     </Tabs>
   </div>
 </template>
