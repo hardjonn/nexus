@@ -40,11 +40,11 @@ const store = reactive({
     console.log('Activating Tab:', tabName);
 
     // make an ipc call to the main process to set the active tab
-    window.conf.saveConfigApp_ActiveTab(tabName);
+    window.confAPI.saveConfigApp_ActiveTab(tabName);
   },
 });
 
-window.conf.getConfig().then((config) => {
+window.confAPI.getConfig().then((config) => {
   console.log('Received Config from the main process:', config);
   store.db = config.db;
   store.steam = config.steam;
