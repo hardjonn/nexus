@@ -16,6 +16,8 @@ const defaultConfig = {
   },
   nas: {
     host: 'nexus.host',
+    user: 'nexus',
+    private_key_path: '/home/deck/.ssh/spb_truenas_nexus',
     games_lib_path: 'Nexus/Games',
     prefixes_path: 'Nexus/Prefixes',
   },
@@ -89,6 +91,14 @@ const schema = {
         host: {
           type: 'string',
           default: 'nexus.host',
+        },
+        user: {
+          type: 'string',
+          default: 'nexus',
+        },
+        private_key_path: {
+          type: 'string',
+          default: '/home/deck/.ssh/spb_truenas_nexus',
         },
         games_lib_path: {
           type: 'string',
