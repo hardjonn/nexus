@@ -17,17 +17,51 @@ async function steam_getAllGamesMap() {
 
   for (const key in shortcutsMap) {
     const shortcut = shortcutsMap[key];
-    const game = {
-      steamAppId: shortcut['appid'],
+    const steamAppId = shortcut['appid'];
+
+    gamesMap[steamAppId] = {
+      steamAppId: steamAppId,
       steamTitle: shortcut['AppName'] ?? shortcut['appname'],
       steamExeTarget: shortcut['Exe'] ?? shortcut['exe'],
-      steamStartDir: shortcut['StartDir'],
-    };
+      steamStartDir: shortcut['StartDir'] ?? shortcut['startdir'],
+      steamLaunchArgs: shortcut['LaunchOptions'] ?? shortcut['launchoptions'],
+      icon: loadIconFromPath(shortcut['Icon'] ?? shortcut['icon']),
 
-    gamesMap[game.steamAppId] = game;
+      // all these fields are not in the shortcuts.vdf file and unknown
+      // they will be populated later when saving the game
+      // for example the start dir could look like this:
+      // /home/deck/.var/app/ru.linux_gaming.PortProton/steam_scripts
+      clientLocation: null,
+      nasLocation: null,
+      prefixLocation: null,
+      launcher: 'NOOP',
+      status: 'DRAFT',
+      hash: null,
+      sizeInBytes: 0,
+      realLocalPath: null,
+      localHash: null,
+      localSizeInBytes: 0,
+      remoteHash: null,
+      remoteSizeInBytes: 0,
+      source: 'steam',
+    };
   }
 
   return gamesMap;
+}
+
+function loadIconFromPath(iconPath) {
+  // Load the icon from the given path
+  // the icon will be stored in the database as a blob
+
+  // check if the icon path is a valid file
+  if (!fs.existsSync(iconPath)) {
+    console.error(`Icon path does not exist: ${iconPath}`);
+    return null;
+  }
+
+  const iconBuffer = fs.readFileSync(iconPath);
+  return iconBuffer.toString('base64');
 }
 
 function getVdfShortcutsFullPath() {

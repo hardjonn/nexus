@@ -9,7 +9,27 @@ async function db_getAllGamesMap() {
     const gamesMap = {};
     for (const game of games) {
       const steamAppId = game['steam_app_id'];
-      gamesMap[steamAppId] = game;
+      gamesMap[steamAppId] = {
+        steamAppId: game['steam_app_id'],
+        steamTitle: game['steam_title'],
+        steamExeTarget: game['steam_exe_target'],
+        steamStartDir: game['steam_start_dir'],
+        steamLaunchArgs: game['steam_launch_args'],
+        icon: game['icon'] ? Buffer.from(game['icon']).toString('base64') : null,
+        clientLocation: game['client_location'],
+        nasLocation: game['nas_location'],
+        prefixLocation: game['prefix_location'],
+        launcher: game['launcher'],
+        hash: game['hash_md5'],
+        sizeInBytes: game['size_in_bytes'],
+        status: game['status'],
+        realLocalPath: null,
+        localHash: null,
+        localSizeInBytes: 0,
+        remoteHash: null,
+        remoteSizeInBytes: 0,
+        source: 'db',
+      };
     }
 
     return gamesMap;
