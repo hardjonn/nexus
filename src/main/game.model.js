@@ -18,6 +18,9 @@ function initGameModel(sequelize) {
     steam_launch_args: {
       type: DataTypes.STRING,
     },
+    icon: {
+      type: DataTypes.BLOB,
+    },
     client_location: {
       type: DataTypes.STRING,
     },
@@ -30,6 +33,11 @@ function initGameModel(sequelize) {
     launcher: {
       type: DataTypes.ENUM('NOOP', 'PORT_PROTON', 'PS2', 'PS3'), // Define the ENUM type and its values
       defaultValue: 'NOOP', // Set the default value
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.ENUM('DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED'), // Define the ENUM type and its values
+      defaultValue: 'DRAFT', // Set the default value
       allowNull: false,
     },
     hash_md5: {
