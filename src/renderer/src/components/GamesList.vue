@@ -1,10 +1,14 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { getGames } from '../games.js';
+import GameItem from './GameItem.vue';
 
 const loading = ref(false);
 const error = ref(null);
 const gamesList = ref([]);
+const search = ref('');
+const source = ref(null);
+const status = ref(['DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED']);
 
 loadGamesList();
 
@@ -25,18 +29,45 @@ async function loadGamesList() {
     loading.value = false;
   }
 }
+
+const filteredAndSortedGames = computed(() => {
+  function compare(a, b) {
+    if (a.steamTitle < b.steamTitle) return -1;
+    if (a.steamTitle > b.steamTitle) return 1;
+    return 0;
+  }
+
+  console.log('status.value', status.value);
+
+  return gamesList.value
+    .filter((game) => {
+      return game.steamTitle.toLowerCase().includes(search.value.toLowerCase());
+    })
+    .filter((game) => {
+      if (!source.value) return true;
+      if (source.value === 'db') return game.source === 'db';
+      if (source.value === 'steam') return game.source === 'steam';
+    })
+    .filter((game) => {
+      if (status.value.length === 0) return true;
+      if (status.value.includes(game.status)) return true;
+      return false;
+    })
+    .sort(compare);
+});
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full p-4">
-    <div class="flex items-center justify-between w-full p-2">
-      <h2 class="block w-full text-3xl font-bold dark:text-white">
+  <div class="flex flex-col items-center justify-center w-full mb-4 mt-4">
+    <div class="flex items-center justify-between w-full">
+      <h2 class="block text-3xl font-bold dark:text-white">
         <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Games Lib</span>
       </h2>
+
       <button
         v-if="!loading"
         type="button"
-        class="w-3xs text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+        class="w-3xs text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         @click="loadGamesList()"
       >
         Refresh
@@ -46,7 +77,7 @@ async function loadGamesList() {
         v-if="loading"
         disabled
         type="button"
-        class="w-3xs text-white bg-gradient-to-br from-purple-600 to-blue-500 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 inline-flex items-center cursor-not-allowed"
+        class="w-3xs text-white bg-gradient-to-br from-purple-600 to-blue-500 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center cursor-not-allowed"
       >
         <svg aria-hidden="true" role="status" class="inline w-4 h-4 me-3 text-white animate-spin" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -60,6 +91,129 @@ async function loadGamesList() {
         </svg>
         Loading...
       </button>
+    </div>
+  </div>
+
+  <div class="flex flex-col items-center justify-center w-full mb-4">
+    <div class="flex items-center justify-between w-full">
+      <div class="relative w-md">
+        <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+          <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+          </svg>
+        </div>
+        <input
+          id="search"
+          v-model="search"
+          type="search"
+          class="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Search"
+          required
+        />
+      </div>
+
+      <div>
+        <span class="font-semibold text-gray-900 dark:text-white">Source: </span>
+
+        <div class="flex">
+          <div class="flex items-center me-4">
+            <input
+              id="source-all"
+              v-model="source"
+              checked
+              type="radio"
+              value=""
+              name="source-filter"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="source-all" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">All</label>
+          </div>
+          <div class="flex items-center me-4">
+            <input
+              id="source-nexus"
+              v-model="source"
+              type="radio"
+              value="db"
+              name="source-filter"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="source-nexus" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Nexus DB</label>
+          </div>
+          <div class="flex items-center me-4">
+            <input
+              id="source-steam"
+              v-model="source"
+              type="radio"
+              value="steam"
+              name="source-filter"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="source-steam" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Steam</label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="font-semibold text-gray-900 dark:text-white">Status: </span>
+
+        <div class="flex">
+          <div class="flex items-center me-4">
+            <input
+              id="status-checkbox-draft"
+              v-model="status"
+              checked
+              type="checkbox"
+              value="DRAFT"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="status-checkbox-draft" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">DRAFT</label>
+          </div>
+          <div class="flex items-center me-4">
+            <input
+              id="status-checkbox-uploading"
+              v-model="status"
+              checked
+              type="checkbox"
+              value="UPLOADING"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="status-checkbox-uploading" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">UPLOADING</label>
+          </div>
+          <div class="flex items-center me-4">
+            <input
+              id="status-checkbox-active"
+              v-model="status"
+              checked
+              type="checkbox"
+              value="ACTIVE"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="status-checkbox-active" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">ACTIVE</label>
+          </div>
+          <div class="flex items-center me-4">
+            <input
+              id="status-checkbox-inactive"
+              v-model="status"
+              checked
+              type="checkbox"
+              value="INACTIVE"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="status-checkbox-inactive" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">INACTIVE</label>
+          </div>
+          <div class="flex items-center">
+            <input
+              id="status-checkbox-archived"
+              v-model="status"
+              checked
+              type="checkbox"
+              value="ARCHIVED"
+              class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label for="status-checkbox-archived" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">ARCHIVED</label>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -79,13 +233,11 @@ async function loadGamesList() {
     </div>
   </div>
 
-  <div v-if="gamesList.length === 0 && !loading" class="no-games">No games found in the library</div>
+  <div v-if="filteredAndSortedGames.length === 0 && !loading" class="no-games">No games found in the library</div>
 
-  <div v-if="gamesList.length > 0" class="game-list">
-    <div v-for="game in gamesList" :key="game.id" class="game-item">
-      <img :src="game.image" alt="Game Image" />
-      <h3>{{ game.name }}</h3>
-      <p>{{ game.description }}</p>
+  <div v-if="filteredAndSortedGames.length > 0" class="game-list">
+    <div v-for="game in filteredAndSortedGames" :key="game.steamAppId" class="game-item">
+      <GameItem :game-item="game" />
     </div>
   </div>
 </template>

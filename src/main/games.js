@@ -2,6 +2,8 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import crypto from 'crypto';
 const { exec } = require('child_process');
+const drivelist = require('drivelist');
+const nodeDiskInfo = require('node-disk-info');
 import { promisify } from 'util';
 const execPromise = promisify(exec);
 const { NodeSSH } = require('node-ssh');
@@ -32,45 +34,58 @@ async function getGames() {
   // step 2: get all the records from steam
   const gamesFromSteamMap = await steam_getAllGamesMap();
 
-  // step 3: go over the games from the database
-  // and try to find a match in the steam games
+  // step 3: merge the two maps
+  // conflict resolution:
+  // 1. if the game is in the DB and not in steam, keep it
+  // 2. if the game is in steam and not in the DB, keep it
+  // 3. if the game is in both, keep the one from the DB
+  const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
+  // console.log('Merged Games Map:', mergedGamesMap);
+
+  // get the list of all attached drives
+  // because we don't know where the game is installed
+  // that path could be on the internal drive or on an external drive
+  const disks = nodeDiskInfo.getDiskInfoSync();
+
+  // step 4: go over the merged games map
   // calculate the hash and size for both local and remote
-  for (const key in gamesFromDbMap) {
-    const dbGame = gamesFromDbMap[key];
-    const steamGame = gamesFromSteamMap[key];
+  // locally the game could be located at different places
+  // depending where it was installed to
+  for (const key in mergedGamesMap) {
+    const game = mergedGamesMap[key];
 
-    const game = {
-      steamAppId: dbGame['steam_app_id'],
-      steamTitle: dbGame['steam_title'],
-      steamExeTarget: dbGame['steam_exe_target'],
-      steamStartDir: dbGame['steam_start_dir'],
-      steamLaunchArgs: dbGame['steam_launch_args'],
-      clientLocation: dbGame['client_location'],
-      nasLocation: dbGame['nas_location'],
-      prefixLocation: dbGame['prefix_location'],
-      launcher: dbGame['launcher'],
-      hash: dbGame['hash_md5'],
-      sizeInBytes: dbGame['size_in_bytes'],
-      localHash: null,
-      localSizeInBytes: 0,
-      remoteHash: null,
-      remoteSizeInBytes: 0,
-    };
+    // if the game is sourced from steam, it doesn't have
+    // the clientLocation and nasLocation
+    // so we need to skip it
+    if (game.source === 'steam') {
+      console.log('Skipping game from steam:', game);
+      gamesMap[game.steamAppId] = game;
+      continue;
+    }
 
-    console.log('DB Game:', dbGame);
-    console.log('Steam Game:', steamGame);
-
-    // get the local hash and size
     try {
-      const localGamePath = path.join(config.client.games_lib_path, game.clientLocation);
-      console.log('Local Game Path:', localGamePath);
+      for (const disk of disks) {
+        const mountPoint = disk.mounted;
 
-      const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
-      console.log('Local Game Hash:', localHash);
-      console.log('Local Game Size:', localSizeInBytes);
+        const localGamePath = path.join(mountPoint, config.client.games_lib_path, game.clientLocation);
+        console.log('Local Game Path:', localGamePath);
 
-      game.localHash = localHash;
-      game.localSizeInBytes = localSizeInBytes;
+        if (!fs.existsSync(localGamePath)) {
+          continue; // Skip to the next disk if the path doesn't exist
+        }
+
+        console.log('Found local game path:', localGamePath);
+
+        const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
+        console.log('Local Game Hash:', localHash);
+        console.log('Local Game Size:', localSizeInBytes);
+
+        game.realLocalPath = localGamePath;
+        game.localHash = localHash;
+        game.localSizeInBytes = localSizeInBytes;
+
+        break;
+      }
 
       const remoteGamePath = path.join(config.nas.games_lib_path, game.nasLocation);
       console.log('Remote Game Path:', remoteGamePath);
@@ -97,7 +112,7 @@ async function getGames() {
 
   console.log('Games Map:', gamesMap);
 
-  return gamesMap;
+  return Object.values(gamesMap).slice(0, 2);
 }
 
 // function that takes in a directory path
