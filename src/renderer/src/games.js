@@ -2,4 +2,8 @@ function getGames() {
   return window.gamesAPI.getGames();
 }
 
-export { getGames };
+function uploadIcon(steamAppId, filePath) {
+  return window.gamesAPI.uploadIcon(steamAppId, filePath);
+}
+
+export { getGames, uploadIcon };

@@ -12,6 +12,7 @@ const confAPI = {
 
 const gamesAPI = {
   getGames: () => electronAPI.ipcRenderer.invoke('games/get'),
+  uploadIcon: (steamAppId, filePath) => electronAPI.ipcRenderer.invoke('games/icon/upload', steamAppId, filePath),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

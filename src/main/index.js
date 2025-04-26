@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
-import { getGames } from './games';
+import { getGames, uploadIcon } from './games';
 
 function createWindow() {
   // retrieve the window bounds from the config
@@ -22,6 +22,11 @@ function createWindow() {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true,
+      // webSecurity: false,
+      // allowRunningInsecureContent: true,
     },
   });
 
@@ -125,4 +130,8 @@ ipcMain.on('config/save/app/active_tab', (event, tabName) => {
 
 ipcMain.handle('games/get', async () => {
   return getGames();
+});
+
+ipcMain.handle('games/icon/upload', async (event, steamAppId, filePath) => {
+  return await uploadIcon(steamAppId, filePath);
 });

@@ -7,8 +7,9 @@ const nodeDiskInfo = require('node-disk-info');
 import { promisify } from 'util';
 const execPromise = promisify(exec);
 const { NodeSSH } = require('node-ssh');
+import { Jimp } from 'jimp';
 
-import { db_getAllGamesMap } from './game.queries';
+import { db_getAllGamesMap, db_uploadIcon } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 
@@ -287,4 +288,35 @@ function makeDirectorySizeCommand(dirPath) {
   return `sh -c "cd ${escapedDirPath} && find . -type f -printf '%s\\n' | awk '{ total += \\$1 } END { if (NR==0) print 0; else print total }'"`;
 }
 
-export { getGames };
+async function uploadIcon(steamAppId, filePath) {
+  try {
+    const image = await Jimp.read(filePath);
+    // we need to convert image to a 256x256 JPG
+    const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
+    console.log('Resized image buffer:', resizedImage.length);
+
+    const uploadResult = await db_uploadIcon(steamAppId, resizedImage);
+
+    if (!uploadResult) {
+      console.log('Failed to upload icon to the database');
+      return {
+        success: false,
+        message: 'Failed to upload icon to the database',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Icon uploaded successfully',
+      icon: resizedImage.toString('base64'), // Convert the buffer to a base64 string
+    };
+  } catch (error) {
+    console.error('Error uploading icon:', error);
+    return {
+      success: false,
+      message: 'Failed to upload icon: ' + error.message,
+    };
+  }
+}
+
+export { getGames, uploadIcon };

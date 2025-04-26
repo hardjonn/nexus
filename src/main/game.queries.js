@@ -39,4 +39,28 @@ async function db_getAllGamesMap() {
   }
 }
 
-export { db_getAllGamesMap };
+async function db_uploadIcon(steamAppId, resizedImage) {
+  try {
+    const game = await Game.findOne({
+      where: {
+        steam_app_id: steamAppId,
+      },
+    });
+
+    if (!game) {
+      throw new Error(`Game with steamAppId ${steamAppId} not found`);
+    }
+
+    await game.update({
+      icon: resizedImage,
+    });
+    console.log(`Icon for game ${steamAppId} updated successfully`);
+  } catch (error) {
+    console.error('Error uploading icon:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export { db_getAllGamesMap, db_uploadIcon };
