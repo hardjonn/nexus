@@ -41,7 +41,7 @@ const filteredAndSortedGames = computed(() => {
 
   return gamesList.value
     .filter((game) => {
-      return game.steamTitle.toLowerCase().includes(search.value.toLowerCase());
+      return game.steamTitle.toLowerCase().includes(search.value.toLowerCase()) || game.steamAppId.toString().includes(search.value.toLowerCase());
     })
     .filter((game) => {
       if (!source.value) return true;
