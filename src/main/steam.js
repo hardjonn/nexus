@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import { readVdf, writeVdf } from 'steam-binary-vdf';
 
 import { getConfig } from './conf';
+import { error } from 'node:console';
 
 async function steam_getAllGamesMap() {
   const shortcutsPath = getVdfShortcutsFullPath();
@@ -44,6 +45,7 @@ async function steam_getAllGamesMap() {
       remoteHash: null,
       remoteSizeInBytes: 0,
       source: 'steam',
+      errors: [],
     };
   }
 

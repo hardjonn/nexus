@@ -1,7 +1,7 @@
 <script setup>
-import { computed, reactive } from 'vue';
+import { computed, reactive, toRaw } from 'vue';
 const { webUtils } = require('electron');
-import { uploadIcon } from '../games.js';
+import { uploadIcon, saveGameItem } from '../games.js';
 
 const props = defineProps({
   gameItem: {
@@ -16,12 +16,13 @@ const data = reactive({
   iconUploading: false,
 
   isEditing: false,
+  isSaving: false,
 
   errorMessage: null,
   progressMessage: null,
   successMessage: null,
 
-  gameItem: props.gameItem,
+  gameItem: { ...props.gameItem },
 });
 
 const currentIcon = computed(() => {
@@ -57,6 +58,29 @@ const formatSize = computed(() => {
   if (data.gameItem.sizeInBytes < 1024 * 1024 * 1024) return `${(data.gameItem.sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
 
   return `${(data.gameItem.sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+});
+
+const localState = computed(() => {
+  if (data.gameItem.localHash === data.gameItem.hash) {
+    return 'Local state matches DB';
+  }
+
+  if (data.gameItem.localHash === data.gameItem.remoteHash) {
+    return 'Local state matches Remote';
+  }
+
+  return 'Local state does not match DB or Remote';
+});
+const remoteState = computed(() => {
+  if (data.gameItem.remoteHash === data.gameItem.hash) {
+    return 'Remote state matches DB';
+  }
+
+  if (data.gameItem.remoteHash === data.gameItem.localHash) {
+    return 'Remote state matches Local';
+  }
+
+  return 'Remote state does not match DB or Local';
 });
 
 console.log('GameItem props:', data.gameItem);
@@ -106,9 +130,54 @@ async function onUploadIcon() {
     console.log('Icon upload status:', response);
   } catch (error) {
     console.error('Error uploading icon:', error);
-    data.errorMessage = 'An error occurred while uploading the icon:' + error.message;
+    data.errorMessage = 'An error occurred while uploading the icon: ' + error.message;
   } finally {
     data.iconUploading = false;
+    data.progressMessage = null;
+  }
+}
+
+function onActionEdit() {
+  data.isEditing = true;
+  data.errorMessage = null;
+  data.successMessage = null;
+  data.progressMessage = null;
+}
+
+function onActionEditCancel() {
+  data.isEditing = false;
+
+  data.gameItem = { ...props.gameItem };
+}
+
+async function onActionSave() {
+  data.isEditing = false;
+  data.isSaving = true;
+  data.errorMessage = null;
+  data.successMessage = null;
+  data.progressMessage = 'Saving to DB...';
+
+  try {
+    const response = await saveGameItem(props.gameItem.steamAppId, toRaw(data.gameItem));
+
+    if (!response) {
+      console.error('No response from saveGameItem');
+      data.errorMessage = 'Something went wrong while saving the game item.';
+      return;
+    }
+
+    if (!response.success) {
+      console.error('Saving game item failed:', response);
+      data.errorMessage = response.message || 'Something went wrong while saving the game item.';
+      return;
+    }
+
+    data.successMessage = 'Game item saved successfully!';
+  } catch (error) {
+    console.error('Error saving the game item:', error);
+    data.errorMessage = 'An error occurred while saving the game items:' + error.message;
+  } finally {
+    data.isSaving = false;
     data.progressMessage = null;
   }
 }
@@ -119,57 +188,133 @@ async function onUploadIcon() {
 
 <template>
   <div class="w-full flex flex-col mt-4 items-start justify-between border rounded-lg shadow-sm md:flex-row dark:border-gray-700 dark:bg-gray-800">
-    <div class="relative w-full rounded-t-lg h-96 md:h-auto md:w-48 md:rounded-none md:rounded-s-lg">
-      <img class="object-cover w-full" :src="currentIcon" alt="" />
+    <div class="">
+      <div class="relative w-full rounded-t-lg h-96 md:h-auto md:w-48 md:rounded-none md:rounded-s-lg">
+        <img class="object-cover w-full" :src="currentIcon" alt="" />
 
-      <label v-if="data.gameItem.source == 'db'" :for="`icon-input-file-${data.gameItem.steamAppId}`" class="absolute top-0 left-0 right-0 bottom-0 block cursor-pointer">
-        <svg
-          class="stroke-gray-300 absolute block lef-0 right-0 m-auto top-0 bottom-0"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="0.4"
-          stroke="currentColor"
+        <label v-if="data.gameItem.source == 'db'" :for="`icon-input-file-${data.gameItem.steamAppId}`" class="absolute top-0 left-0 right-0 bottom-0 block cursor-pointer">
+          <svg
+            class="stroke-gray-300 absolute block lef-0 right-0 m-auto top-0 bottom-0"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="0.4"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+            />
+          </svg>
+
+          <input :id="`icon-input-file-${data.gameItem.steamAppId}`" hidden class="" type="file" @change="iconChanged" />
+
+          <button
+            v-if="data.iconPreview"
+            :disabled="data.progressMessage"
+            :class="data.progressMessage ? 'disabled cursor-not-allowed' : ''"
+            type="button"
+            class="absolute m-auto left-0 right-0 bottom-0 block w-24 block text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+            @click="onUploadIcon"
+          >
+            Upload
+          </button>
+        </label>
+      </div>
+
+      <div class="mt-4">
+        <button
+          v-if="!data.isEditing && !data.isSaving"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="onActionEdit"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
-          />
-        </svg>
-
-        <input :id="`icon-input-file-${data.gameItem.steamAppId}`" hidden class="" type="file" @change="iconChanged" />
+          Edit
+        </button>
 
         <button
-          v-if="data.iconPreview"
-          :disabled="data.progressMessage"
-          :class="data.progressMessage ? 'disabled cursor-not-allowed' : ''"
+          v-if="data.isSaving"
+          disabled
           type="button"
-          class="absolute m-auto left-0 right-0 bottom-0 block w-24 block text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
-          @click="onUploadIcon"
+          class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
         >
-          Upload
+          <svg aria-hidden="true" role="status" class="inline w-4 h-4 me-3 text-white animate-spin" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+              fill="#E5E7EB"
+            />
+            <path
+              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+              fill="currentColor"
+            />
+          </svg>
+          Saving...
         </button>
-      </label>
+
+        <button
+          v-if="data.isEditing"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="onActionSave"
+        >
+          Save to DB
+        </button>
+
+        <button
+          v-if="data.isEditing"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="onActionEditCancel"
+        >
+          Cancel and Reset
+        </button>
+      </div>
     </div>
 
     <div class="flex flex-col justify-between p-4 leading-normal flex-grow">
-      <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-        >Steam Title: <span class="font-normal text-gray-700 dark:text-gray-400">{{ data.gameItem.steamTitle }}</span></span
-      >
+      <div class="grid gap-6 grid-cols-[20fr_80fr] mb-2">
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Title:</span>
+        <input
+          v-model="data.gameItem.steamTitle"
+          type="text"
+          class="border text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          :disabled="!data.isEditing"
+        />
+      </div>
 
       <div class="grid gap-6 grid-cols-3">
         <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-          >Steam App Id: <span class="font-normal text-gray-700 dark:text-gray-400">{{ data.gameItem.steamAppId }}</span></span
+          >Steam App Id: <span class="font-normal dark:text-gray-400">{{ data.gameItem.steamAppId }}</span></span
         >
 
         <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-          >Source: <span class="font-normal text-gray-700 dark:text-gray-400">{{ data.gameItem.source }}</span></span
+          >Source: <span class="font-normal dark:text-gray-400">{{ data.gameItem.source }}</span></span
         >
 
         <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-          >Status: <span class="font-normal text-gray-700 dark:text-gray-400">{{ data.gameItem.status }}</span></span
+          >Status: <span class="font-normal dark:text-gray-400">{{ data.gameItem.status }}</span></span
         >
+      </div>
+
+      <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+        <span class="text-l font-bold tracking-tight dark:text-white">Local State:</span>
+        <span class="font-normal dark:text-gray-400">{{ localState }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Remote State:</span>
+        <span class="font-normal dark:text-gray-400">{{ remoteState }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Errors</span>
+        <ul class="space-y-1 text-gray-500 list-inside dark:text-red-500">
+          <li v-for="error in data.gameItem.errors" :key="error.message" class="flex items-center">
+            <svg class="shrink-0 inline w-4 h-4 me-3 mt-[2px]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"
+              />
+            </svg>
+            {{ error.message }}
+          </li>
+        </ul>
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[13fr_37fr_13fr_37fr] p-2 border border-gray-600 rounded-lg">
@@ -193,7 +338,7 @@ async function onUploadIcon() {
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
-        <span class="text-l font-bold tracking-tight dark:text-white">Steam Exe Target:</span>
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Exe Target:</span>
         <input
           v-model="data.gameItem.steamExeTarget"
           type="text"
@@ -201,7 +346,7 @@ async function onUploadIcon() {
           :disabled="!data.isEditing"
         />
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Steam Start Dir:</span>
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Start Dir:</span>
         <input
           v-model="data.gameItem.steamStartDir"
           type="text"
@@ -209,7 +354,7 @@ async function onUploadIcon() {
           :disabled="!data.isEditing"
         />
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Steam Launch Args:</span>
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Launch Args:</span>
         <input
           v-model="data.gameItem.steamLaunchArgs"
           type="text"
@@ -217,7 +362,7 @@ async function onUploadIcon() {
           :disabled="!data.isEditing"
         />
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Launcher:</span>
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Launcher:</span>
         <ul class="items-center w-full text-sm font-medium border rounded-lg sm:flex dark:bg-gray-700 dark:border-gray-600 dark:text-white">
           <li class="w-full border-b dark:border-gray-600">
             <div class="flex items-center ps-3">
@@ -282,7 +427,7 @@ async function onUploadIcon() {
         <span class="text-l font-bold tracking-tight dark:text-white">Real Local Full Path:</span>
         <span class="font-normal text-gray-400">{{ data.gameItem.realLocalPath }}</span>
 
-        <span class="text-l font-bold tracking-tight dark:text-white">NAS Location:</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">NAS Location:</span>
         <input
           v-model="data.gameItem.nasLocation"
           type="text"
@@ -290,7 +435,7 @@ async function onUploadIcon() {
           :disabled="!data.isEditing"
         />
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Client Location:</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Client Location:</span>
         <input
           v-model="data.gameItem.clientLocation"
           type="text"
@@ -298,7 +443,7 @@ async function onUploadIcon() {
           :disabled="!data.isEditing"
         />
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Prefix Location:</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Prefix Location:</span>
         <input
           v-model="data.gameItem.prefixLocation"
           type="text"
@@ -307,8 +452,6 @@ async function onUploadIcon() {
         />
       </div>
     </div>
-
-    <div class="flex flex-col justify-between p-4 w-s">Actions</div>
   </div>
 
   <div

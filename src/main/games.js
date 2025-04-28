@@ -9,7 +9,7 @@ const execPromise = promisify(exec);
 const { NodeSSH } = require('node-ssh');
 import { Jimp } from 'jimp';
 
-import { db_getAllGamesMap, db_uploadIcon } from './game.queries';
+import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 
@@ -77,13 +77,21 @@ async function getGames() {
 
         console.log('Found local game path:', localGamePath);
 
-        const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
-        console.log('Local Game Hash:', localHash);
-        console.log('Local Game Size:', localSizeInBytes);
+        try {
+          const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
 
-        game.realLocalPath = localGamePath;
-        game.localHash = localHash;
-        game.localSizeInBytes = localSizeInBytes;
+          console.log('Local Game Hash:', localHash);
+          console.log('Local Game Size:', localSizeInBytes);
+
+          game.realLocalPath = localGamePath;
+          game.localHash = localHash;
+          game.localSizeInBytes = localSizeInBytes;
+        } catch (error) {
+          console.error('Error getting local directory hash and size:', error);
+          game.errors.push({
+            message: `Error getting local directory hash and size: ${error.message}`,
+          });
+        }
 
         break;
       }
@@ -97,10 +105,13 @@ async function getGames() {
 
       game.remoteHash = remoteHash;
       game.remoteSizeInBytes = remoteSizeInBytes;
-
-      gamesMap[game.steamAppId] = game;
     } catch (error) {
-      console.error('Error getting directory hash and size:', error);
+      console.error('Error getting remote directory hash and size:', error);
+      game.errors.push({
+        message: `Error getting remote directory hash and size: ${error.message}`,
+      });
+    } finally {
+      gamesMap[game.steamAppId] = game;
     }
 
     // get the remote hash and size
@@ -319,4 +330,39 @@ async function uploadIcon(steamAppId, filePath) {
   }
 }
 
-export { getGames, uploadIcon };
+async function saveGameItem(steamAppId, gameItem) {
+  console.log('Saving game item:', steamAppId, gameItem);
+
+  try {
+    if (gameItem.source === 'steam') {
+      console.log('Game item is from steam, skipping save');
+      return {
+        success: false,
+        message: 'Game item is from steam, skipping save',
+      };
+    }
+    const result = await db_updateGameItem(steamAppId, gameItem);
+
+    if (!result) {
+      console.log('Failed to save game item to the database');
+      return {
+        success: false,
+        message: 'Failed to save game item to the database',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Game item saved successfully',
+      gameItem: result,
+    };
+  } catch (error) {
+    console.error('Error saving game item:', error);
+    return {
+      success: false,
+      message: 'Failed to save game item: ' + error.message,
+    };
+  }
+}
+
+export { getGames, uploadIcon, saveGameItem };

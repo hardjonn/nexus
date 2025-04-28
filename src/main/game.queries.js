@@ -29,6 +29,7 @@ async function db_getAllGamesMap() {
         remoteHash: null,
         remoteSizeInBytes: 0,
         source: 'db',
+        errors: [],
       };
     }
 
@@ -63,4 +64,38 @@ async function db_uploadIcon(steamAppId, resizedImage) {
   return true;
 }
 
-export { db_getAllGamesMap, db_uploadIcon };
+async function db_updateGameItem(steamAppId, gameItem) {
+  try {
+    const game = await Game.findOne({
+      where: {
+        steam_app_id: steamAppId,
+      },
+    });
+
+    if (!game) {
+      throw new Error(`Game with steamAppId ${steamAppId} not found`);
+    }
+
+    await game.update({
+      steam_title: gameItem.steamTitle,
+      steam_exe_target: gameItem.steamExeTarget,
+      steam_start_dir: gameItem.steamStartDir,
+      steam_launch_args: gameItem.steamLaunchArgs,
+      client_location: gameItem.clientLocation,
+      nas_location: gameItem.nasLocation,
+      prefix_location: gameItem.prefixLocation,
+      launcher: gameItem.launcher,
+      status: gameItem.status,
+      hash_md5: gameItem.hash,
+      size_in_bytes: gameItem.sizeInBytes,
+    });
+    console.log(`Game item ${steamAppId} updated successfully`);
+  } catch (error) {
+    console.error('Error saving game item:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export { db_getAllGamesMap, db_uploadIcon, db_updateGameItem };
