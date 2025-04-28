@@ -6,14 +6,18 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
-    // build: {
-    //   rollupOptions: {
-    //     external: ['electron-store'],
-    //   },
-    //   output: {
-    //     format: 'es',
-    //   },
-    // },
+    build: {
+      sourcemap: true,
+      rollupOptions: {
+        // external: ['electron-store'],
+        output: {
+          sourcemap: true,
+        },
+      },
+      //   output: {
+      //     format: 'es',
+      //   },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
