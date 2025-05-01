@@ -9,7 +9,7 @@ const execPromise = promisify(exec);
 const { NodeSSH } = require('node-ssh');
 import { Jimp } from 'jimp';
 
-import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem } from './game.queries';
+import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 
@@ -26,7 +26,6 @@ import { getConfig } from './conf';
 // if the hash is NULL and the size is 0 then the game is not installed/present
 
 async function getGames() {
-  const config = getConfig();
   const gamesMap = {};
 
   // step 1: get all the records from the database
@@ -43,88 +42,119 @@ async function getGames() {
   const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
   // console.log('Merged Games Map:', mergedGamesMap);
 
-  // get the list of all attached drives
-  // because we don't know where the game is installed
-  // that path could be on the internal drive or on an external drive
-  const disks = nodeDiskInfo.getDiskInfoSync();
-
   // step 4: go over the merged games map
   // calculate the hash and size for both local and remote
   // locally the game could be located at different places
   // depending where it was installed to
   for (const key in mergedGamesMap) {
-    const game = mergedGamesMap[key];
+    const game = await adjustedGameWithLocalAndRemoteDetails(mergedGamesMap[key]);
+    gamesMap[game.steamAppId] = game;
+  }
 
-    // if the game is sourced from steam, it doesn't have
-    // the clientLocation and nasLocation
-    // so we need to skip it
-    if (game.source === 'steam') {
-      console.log('Skipping game from steam:', game);
-      gamesMap[game.steamAppId] = game;
-      continue;
+  //  console.log('Games Map:', gamesMap);
+
+  return Object.values(gamesMap).slice(0, 5);
+}
+
+async function adjustedGameWithLocalAndRemoteDetails(game) {
+  const config = getConfig();
+
+  // get the list of all attached drives
+  // because we don't know where the game is installed
+  // that path could be on the internal drive or on an external drive
+  const disks = nodeDiskInfo.getDiskInfoSync();
+
+  // if the game is sourced from steam, it doesn't have
+  // the clientLocation and nasLocation
+  // so we need to skip it
+  if (game.source === 'steam') {
+    // console.log('Skipping game from steam:', game);
+    return game;
+  }
+
+  try {
+    for (const disk of disks) {
+      const mountPoint = disk.mounted;
+
+      const localGamePath = path.join(mountPoint, config.client.games_lib_path, game.clientLocation);
+      console.log('Local Game Path:', localGamePath);
+
+      if (!fs.existsSync(localGamePath)) {
+        continue; // Skip to the next disk if the path doesn't exist
+      }
+
+      console.log('Found local game path:', localGamePath);
+
+      try {
+        const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
+
+        console.log('Local Game Hash:', localHash);
+        console.log('Local Game Size:', localSizeInBytes);
+
+        game.realLocalGamePath = localGamePath;
+        game.localHash = localHash;
+        game.localSizeInBytes = localSizeInBytes;
+      } catch (error) {
+        console.error('Error getting local directory hash and size:', error);
+        game.errors.push({
+          message: `Error getting local directory hash and size: ${error.message}`,
+        });
+      }
+
+      break;
     }
 
     try {
-      for (const disk of disks) {
-        const mountPoint = disk.mounted;
+      const localPrefixPath = path.join(config.client.prefixes_path, game.prefixLocation);
+      console.log('Local Prefix Path:', localPrefixPath);
+      game.realLocalPrefixPath = localPrefixPath;
 
-        const localGamePath = path.join(mountPoint, config.client.games_lib_path, game.clientLocation);
-        console.log('Local Game Path:', localGamePath);
-
-        if (!fs.existsSync(localGamePath)) {
-          continue; // Skip to the next disk if the path doesn't exist
-        }
-
-        console.log('Found local game path:', localGamePath);
-
-        try {
-          const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
-
-          console.log('Local Game Hash:', localHash);
-          console.log('Local Game Size:', localSizeInBytes);
-
-          game.realLocalPath = localGamePath;
-          game.localHash = localHash;
-          game.localSizeInBytes = localSizeInBytes;
-        } catch (error) {
-          console.error('Error getting local directory hash and size:', error);
-          game.errors.push({
-            message: `Error getting local directory hash and size: ${error.message}`,
-          });
-        }
-
-        break;
-      }
-
-      const remoteGamePath = path.join(config.nas.games_lib_path, game.nasLocation);
-      console.log('Remote Game Path:', remoteGamePath);
-
-      const { hash: remoteHash, sizeInBytes: remoteSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remoteGamePath);
-      console.log('Remote Game Hash:', remoteHash);
-      console.log('Remote Game Size:', remoteSizeInBytes);
-
-      game.remoteHash = remoteHash;
-      game.remoteSizeInBytes = remoteSizeInBytes;
+      const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(localPrefixPath);
+      game.localPrefixHash = localPrefixHash;
+      game.localPrefixSizeInBytes = localPrefixSizeInBytes;
     } catch (error) {
-      console.error('Error getting remote directory hash and size:', error);
+      console.error('Error getting local prefix hash and size:', error);
       game.errors.push({
-        message: `Error getting remote directory hash and size: ${error.message}`,
+        message: `Error getting local prefix hash and size: ${error.message}`,
       });
-    } finally {
-      gamesMap[game.steamAppId] = game;
     }
 
-    // get the remote hash and size
-    // const { hash, sizeInBytes } = getDirectoryHashAndSize(game.remotePath);
-    // game.remoteHash = hash;
-    // game.remoteSizeInBytes = sizeInBytes;
+    try {
+      const remotePrefixPath = path.join(config.nas.prefixes_path, 'initial', game.prefixLocation);
+      console.log('Remote Prefix Path:', remotePrefixPath);
 
-    // games.push(game);
+      const { hash: remotePrefixHash, sizeInBytes: remotePrefixSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remotePrefixPath);
+      console.log('Remote Initial Prefix Hash:', remotePrefixHash);
+      console.log('Remote Initial Prefix Size:', remotePrefixSizeInBytes);
+
+      game.remotePrefixHash = remotePrefixHash;
+      game.remotePrefixSizeInBytes = remotePrefixSizeInBytes;
+    } catch (error) {
+      console.error('Error getting remote initial prefix hash and size:', error);
+      game.errors.push({
+        message: `Error getting remote initial prefix hash and size: ${error.message}`,
+      });
+    }
+
+    const remoteGamePath = path.join(config.nas.games_lib_path, game.nasLocation);
+    console.log('Remote Game Path:', remoteGamePath);
+
+    const { hash: remoteHash, sizeInBytes: remoteSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remoteGamePath);
+    console.log('Remote Game Hash:', remoteHash);
+    console.log('Remote Game Size:', remoteSizeInBytes);
+
+    game.remoteHash = remoteHash;
+    game.remoteSizeInBytes = remoteSizeInBytes;
+  } catch (error) {
+    console.error('Error getting remote directory hash and size:', error);
+    game.errors.push({
+      message: `Error getting remote directory hash and size: ${error.message}`,
+    });
   }
 
-  console.log('Games Map:', gamesMap);
+  console.log(game);
 
-  return Object.values(gamesMap).slice(0, 2);
+  return game;
 }
 
 // function that takes in a directory path
@@ -334,14 +364,68 @@ async function saveGameItem(steamAppId, gameItem) {
   console.log('Saving game item:', steamAppId, gameItem);
 
   try {
-    if (gameItem.source === 'steam') {
-      console.log('Game item is from steam, skipping save');
+    const validationErrors = validateGameItem(gameItem);
+    if (validationErrors.length) {
       return {
         success: false,
-        message: 'Game item is from steam, skipping save',
+        message: 'Validation errors',
+        errors: validationErrors,
       };
     }
-    const result = await db_updateGameItem(steamAppId, gameItem);
+
+    let result = {};
+
+    // todo: extract into a separate function
+    if (gameItem.source === 'steam') {
+      // run some validations
+      if (gameItem.icon) {
+        // try to use the steam icon when the record is created for the first time
+        const iconBuffer = Buffer.from(gameItem.icon, 'base64');
+        const image = await Jimp.fromBuffer(iconBuffer);
+
+        // we need to convert image to a 256x256 JPG
+        const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
+        gameItem.icon = resizedImage;
+      }
+
+      // we also need to calculate the local hash and size based on the given path
+      // if it's not possible (wrong local path is given) then we cannot create
+      // the game in the DB -- we need a hash/size baseline
+      // and if the game is being created from a Steam game instance
+      // that means the game exists and should be possible to calculate
+      // the hash/size pair
+      try {
+        const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(gameItem.realLocalGamePath);
+        gameItem.hash = localHash;
+        gameItem.sizeInBytes = localSizeInBytes;
+
+        // get hash and size for the local prefix, which will be the initial prefix
+        // initial prefix won't change once created, every Steam account will
+        // use that as a baseline or their own ones if existed
+        // ...
+        // prefix might be optional for PS2/PS3 and some other games/launchers
+        const config = getConfig();
+        const prefixesBasePath = config.client.prefixes_path;
+        const prefixPath = path.join(prefixesBasePath, gameItem.prefixLocation);
+        console.log('prefixesPath: ' + prefixPath);
+
+        const { hash: prefixHash, sizeInBytes: prefixSizeInBytes } = await getLocalDirectoryHashAndSize(prefixPath);
+        gameItem.prefixHash = prefixHash;
+        gameItem.sizeInBytes = prefixSizeInBytes;
+      } catch (error) {
+        console.log('Failed to create and save game item to the database: getLocalDirectoryHashAndSize');
+        return {
+          success: false,
+          message: 'Failed to create game item; getLocalDirectoryHashAndSize error: ' + error,
+        };
+      }
+
+      result = await db_createGameItemFromSteamData(steamAppId, gameItem);
+    } else {
+      // do not upload/update the icon here
+      // icon changes are done separately for created records
+      result = await db_updateGameItem(steamAppId, gameItem);
+    }
 
     if (!result) {
       console.log('Failed to save game item to the database');
@@ -351,18 +435,79 @@ async function saveGameItem(steamAppId, gameItem) {
       };
     }
 
+    // after game is saved we need to refresh all the data for it
+    // and recalculate hash/size
+    console.log('SAVED GAME RESULT: ' + result);
+    const game = await adjustedGameWithLocalAndRemoteDetails(result);
+
     return {
       success: true,
       message: 'Game item saved successfully',
-      gameItem: result,
+      gameItem: game,
     };
   } catch (error) {
     console.error('Error saving game item:', error);
     return {
       success: false,
-      message: 'Failed to save game item: ' + error.message,
+      message: 'Failed to save game item: ' + error,
     };
   }
+}
+
+function validateGameItem(gameItem) {
+  const errors = [];
+
+  if (!gameItem.steamTitle || !gameItem.steamTitle.trim()) {
+    console.log('validateGameItem: steamTitle is empty');
+    errors.push(`Empty field: steamTitle ("${gameItem.steamTitle}")`);
+  }
+
+  if (!gameItem.steamExeTarget || !gameItem.steamExeTarget.trim()) {
+    console.log('validateGameItem: steamExeTarget is empty');
+    errors.push(`Empty field: steamExeTarget ("${gameItem.steamExeTarget}")`);
+  }
+
+  if (!gameItem.steamStartDir || !gameItem.steamStartDir.trim()) {
+    console.log('validateGameItem: steamStartDir is empty');
+    errors.push(`Empty field: steamStartDir ("${gameItem.steamStartDir}")`);
+  }
+
+  if (!gameItem.launcher || !gameItem.launcher.trim()) {
+    console.log('validateGameItem: launcher is empty');
+    errors.push(`Empty field: launcher ("${gameItem.launcher}")`);
+  }
+
+  if (!gameItem.nasLocation || !gameItem.nasLocation.trim()) {
+    console.log('validateGameItem: nasLocation is empty');
+    errors.push(`Empty field: nasLocation ("${gameItem.nasLocation}")`);
+  }
+
+  if (!gameItem.clientLocation || !gameItem.clientLocation.trim()) {
+    console.log('validateGameItem: clientLocation is empty');
+    errors.push(`Empty field: clientLocation ("${gameItem.clientLocation}")`);
+  }
+
+  if (!gameItem.prefixLocation || !gameItem.prefixLocation.trim()) {
+    console.log('validateGameItem: prefixLocation is empty');
+    errors.push(`Empty field: prefixLocation ("${gameItem.prefixLocation}")`);
+  }
+
+  if (gameItem.source === 'db') {
+    return errors;
+  }
+
+  // these validations are steam specific
+  if (!gameItem.realLocalGamePath || !gameItem.realLocalGamePath.trim()) {
+    console.log('validateGameItem: realLocalGamePath is empty');
+    errors.push(`Empty field: realLocalGamePath ("${gameItem.realLocalGamePath}")`);
+  }
+
+  if (!fs.existsSync(gameItem.realLocalGamePath)) {
+    console.log('validateGameItem: game not found at this location: ' + gameItem.realLocalGamePath);
+    errors.push(`Game not found at the following location: ${gameItem.realLocalGamePath}`);
+  }
+
+  return errors;
 }
 
 export { getGames, uploadIcon, saveGameItem };

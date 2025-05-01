@@ -35,16 +35,22 @@ function initGameModel(sequelize) {
       defaultValue: 'NOOP', // Set the default value
       allowNull: false,
     },
-    status: {
-      type: DataTypes.ENUM('DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED'), // Define the ENUM type and its values
-      defaultValue: 'DRAFT', // Set the default value
-      allowNull: false,
-    },
     hash_md5: {
       type: DataTypes.STRING,
     },
     size_in_bytes: {
       type: DataTypes.INTEGER,
+    },
+    prefix_hash_md5: {
+      type: DataTypes.STRING,
+    },
+    prefix_size_in_bytes: {
+      type: DataTypes.INTEGER,
+    },
+    status: {
+      type: DataTypes.ENUM('DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED'), // Define the ENUM type and its values
+      defaultValue: 'DRAFT', // Set the default value
+      allowNull: false,
     },
   });
 }

@@ -21,6 +21,7 @@ const data = reactive({
   errorMessage: null,
   progressMessage: null,
   successMessage: null,
+  errors: null,
 
   gameItem: { ...props.gameItem },
 });
@@ -50,37 +51,72 @@ const sizeMatch = computed(() => {
 const sizeClass = computed(() => {
   return sizeMatch.value ? 'text-gray-400' : 'text-red-500';
 });
-const formatSize = computed(() => {
-  if (data.gameItem.sizeInBytes < 1024) return `${data.gameItem.sizeInBytes} B`;
 
-  if (data.gameItem.sizeInBytes < 1024 * 1024) return `${(data.gameItem.sizeInBytes / 1024).toFixed(2)} KB`;
-
-  if (data.gameItem.sizeInBytes < 1024 * 1024 * 1024) return `${(data.gameItem.sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
-
-  return `${(data.gameItem.sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+const prefixHashMatch = computed(() => {
+  return data.gameItem.prefixHash === data.gameItem.localPrefixHash && data.gameItem.localPrefixHash === data.gameItem.remotePrefixHash;
 });
+const prefixHashClass = computed(() => {
+  return prefixHashMatch.value ? 'text-gray-400' : 'text-red-500';
+});
+
+const prefixSizeMatch = computed(() => {
+  return data.gameItem.prefixSizeInBytes === data.gameItem.localPrefixSizeInBytes && data.gameItem.localPrefixSizeInBytes === data.gameItem.remotePrefixSizeInBytes;
+});
+const prefixSizeClass = computed(() => {
+  return prefixSizeMatch.value ? 'text-gray-400' : 'text-red-500';
+});
+
+function formattedSize(size) {
+  if (size < 1024) return `${size} B`;
+
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
+
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+
+  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
 
 const localState = computed(() => {
-  if (data.gameItem.localHash === data.gameItem.hash) {
-    return 'Local state matches DB';
+  const state = [];
+
+  if (!data.gameItem.realLocalGamePath) {
+    state.push('Game not found locally at any location: probably not installed');
   }
 
-  if (data.gameItem.localHash === data.gameItem.remoteHash) {
-    return 'Local state matches Remote';
+  if (!data.gameItem.realLocalPrefixPath) {
+    state.push('Prefix not found locally at any location: probably not installed');
   }
 
-  return 'Local state does not match DB or Remote';
+  if (data.gameItem.hash === data.gameItem.localHash) {
+    state.push('Local hash matches expected DB hash: game installed');
+  } else {
+    state.push('Local hash does not match expected DB hash: probably not installed or not fully downloaded');
+  }
+
+  if (data.gameItem.sizeInBytes === data.gameItem.localSizeInBytes) {
+    state.push('Local size matches expected DB size: game installed');
+  } else {
+    state.push('Local size does not match expected DB size: probably not installed or not fully downloaded');
+  }
+
+  return state;
 });
 const remoteState = computed(() => {
-  if (data.gameItem.remoteHash === data.gameItem.hash) {
-    return 'Remote state matches DB';
+  const state = [];
+
+  if (!data.gameItem.hash) {
+    state.push('No hash found in DB: game is not uploaded to remote');
   }
 
-  if (data.gameItem.remoteHash === data.gameItem.localHash) {
-    return 'Remote state matches Local';
+  if (data.gameItem.hash && data.gameItem.hash !== data.gameItem.remoteHash) {
+    state.push('Remote hash does not match expected DB hash: probably noy fully uploaded');
   }
 
-  return 'Remote state does not match DB or Local';
+  if (data.gameItem.sizeInBytes !== data.gameItem.remoteSizeInBytes) {
+    state.push('Remote size does not match expected DB size: probably noy fully uploaded');
+  }
+
+  return state;
 });
 
 console.log('GameItem props:', data.gameItem);
@@ -105,6 +141,7 @@ async function onUploadIcon() {
   data.iconUploading = true;
   data.errorMessage = null;
   data.successMessage = null;
+  data.errors = null;
   data.progressMessage = 'Uploading icon...';
 
   try {
@@ -140,6 +177,7 @@ async function onUploadIcon() {
 function onActionEdit() {
   data.isEditing = true;
   data.errorMessage = null;
+  data.errors = null;
   data.successMessage = null;
   data.progressMessage = null;
 }
@@ -154,11 +192,17 @@ async function onActionSave() {
   data.isEditing = false;
   data.isSaving = true;
   data.errorMessage = null;
+  data.errors = null;
   data.successMessage = null;
   data.progressMessage = 'Saving to DB...';
 
   try {
+    const rawGameItem = toRaw(data.gameItem);
+    delete rawGameItem.errors;
+    console.log('Raw Game Item: ', rawGameItem);
+
     const response = await saveGameItem(props.gameItem.steamAppId, toRaw(data.gameItem));
+    console.log(response);
 
     if (!response) {
       console.error('No response from saveGameItem');
@@ -169,8 +213,11 @@ async function onActionSave() {
     if (!response.success) {
       console.error('Saving game item failed:', response);
       data.errorMessage = response.message || 'Something went wrong while saving the game item.';
+      data.errors = response.errors;
       return;
     }
+
+    data.gameItem = { ...response.gameItem };
 
     data.successMessage = 'Game item saved successfully!';
   } catch (error) {
@@ -299,10 +346,14 @@ async function onActionSave() {
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight dark:text-white">Local State:</span>
-        <span class="font-normal dark:text-gray-400">{{ localState }}</span>
+        <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
+          <li v-for="state in localState" :key="state">{{ state }}</li>
+        </ul>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote State:</span>
-        <span class="font-normal dark:text-gray-400">{{ remoteState }}</span>
+        <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
+          <li v-for="state in remoteState" :key="state">{{ state }}</li>
+        </ul>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Errors</span>
         <ul class="space-y-1 text-gray-500 list-inside dark:text-red-500">
@@ -317,24 +368,44 @@ async function onActionSave() {
         </ul>
       </div>
 
-      <div class="grid mb-4 gap-2 grid-cols-[13fr_37fr_13fr_37fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight dark:text-white">DB Hash:</span>
         <span class="font-normal" :class="hashClass">{{ data.gameItem.hash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">DB Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.sizeInBytes }} ({{ formatSize }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.sizeInBytes }} ({{ formattedSize(data.gameItem.sizeInBytes) }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Hash:</span>
         <span class="font-normal" :class="hashClass">{{ data.gameItem.localHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.localSizeInBytes }} ({{ formatSize }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.localSizeInBytes }} ({{ formattedSize(data.gameItem.localSizeInBytes) }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash:</span>
         <span class="font-normal" :class="hashClass">{{ data.gameItem.remoteHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.remoteSizeInBytes }} ({{ formatSize }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.remoteSizeInBytes }} ({{ formattedSize(data.gameItem.remoteSizeInBytes) }})</span>
+      </div>
+
+      <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
+        <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Hash (Initial):</span>
+        <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.prefixHash }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Size (Initial):</span>
+        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.prefixSizeInBytes }} ({{ formattedSize(data.gameItem.prefixSizeInBytes) }})</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Local Hash (Current):</span>
+        <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.localPrefixHash }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Local Size (Current):</span>
+        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.localPrefixSizeInBytes }} ({{ formattedSize(data.gameItem.localPrefixSizeInBytes) }})</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash (Initial):</span>
+        <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.remotePrefixHash }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Remote Size (Initial):</span>
+        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.remotePrefixSizeInBytes }} ({{ formattedSize(data.gameItem.remotePrefixSizeInBytes) }})</span>
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
@@ -371,7 +442,7 @@ async function onActionSave() {
                 v-model="data.gameItem.launcher"
                 value="NOOP"
                 type="radio"
-                name="launcher"
+                :name="`launcher-${data.gameItem.steamAppId}`"
                 :disabled="!data.isEditing"
                 class="w-4 h-4 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
@@ -385,7 +456,7 @@ async function onActionSave() {
                 v-model="data.gameItem.launcher"
                 value="PORT_PROTON"
                 type="radio"
-                name="launcher"
+                :name="`launcher-${data.gameItem.steamAppId}`"
                 :disabled="!data.isEditing"
                 class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
@@ -399,7 +470,7 @@ async function onActionSave() {
                 v-model="data.gameItem.launcher"
                 value="PS2"
                 type="radio"
-                name="launcher"
+                :name="`launcher-${data.gameItem.steamAppId}`"
                 :disabled="!data.isEditing"
                 class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
@@ -413,7 +484,7 @@ async function onActionSave() {
                 v-model="data.gameItem.launcher"
                 value="PS3"
                 type="radio"
-                name="launcher"
+                :name="`launcher-${data.gameItem.steamAppId}`"
                 :disabled="!data.isEditing"
                 class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
@@ -424,8 +495,18 @@ async function onActionSave() {
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
-        <span class="text-l font-bold tracking-tight dark:text-white">Real Local Full Path:</span>
-        <span class="font-normal text-gray-400">{{ data.gameItem.realLocalPath }}</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Game Path:</span>
+        <span v-if="data.gameItem.source === 'db'" class="font-normal py-2.5 text-gray-400">{{ data.gameItem.realLocalGamePath }}</span>
+        <input
+          v-if="data.gameItem.source === 'steam'"
+          v-model="data.gameItem.realLocalGamePath"
+          type="text"
+          class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          :disabled="!data.isEditing"
+        />
+
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Prefix Path:</span>
+        <span class="font-normal py-2.5 text-gray-400">{{ data.gameItem.realLocalPrefixPath }}</span>
 
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">NAS Location:</span>
         <input
@@ -457,17 +538,24 @@ async function onActionSave() {
   <div
     v-if="data.errorMessage"
     id="alert-border-2"
-    class="flex w-full items-center p-4 mb-4 text-red-800 border-t-4 border-red-300 bg-red-50 dark:text-red-400 dark:bg-gray-800 dark:border-red-800"
+    class="flex w-full flex-col p-4 mb-4 text-red-800 border-t-4 border-red-300 bg-red-50 dark:text-red-400 dark:bg-gray-800 dark:border-red-800"
     role="alert"
   >
-    <svg class="shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-      <path
-        d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"
-      />
-    </svg>
-    <div class="ms-3 text-sm font-medium">
-      {{ data.errorMessage }}
+    <div class="flex w-full">
+      <svg class="shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+        <path
+          d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"
+        />
+      </svg>
+      <div class="ms-3 text-sm font-medium">
+        {{ data.errorMessage }}
+      </div>
     </div>
+    <ul class="space-y-1 mx-8 list-inside dark:text-red-500">
+      <li v-for="error in data.errors" :key="error" class="flex items-center">
+        {{ error }}
+      </li>
+    </ul>
   </div>
 
   <div

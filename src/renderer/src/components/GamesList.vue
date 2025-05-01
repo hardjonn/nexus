@@ -233,7 +233,7 @@ const filteredAndSortedGames = computed(() => {
     </div>
   </div>
 
-  <div v-if="filteredAndSortedGames.length === 0 && !loading" class="no-games">No games found in the library</div>
+  <div v-if="filteredAndSortedGames.length === 0 && !loading" class="dark:text-gray-300">No games found in the library</div>
 
   <div v-if="filteredAndSortedGames.length > 0" class="game-list">
     <div v-for="game in filteredAndSortedGames" :key="game.steamAppId" class="game-item">
