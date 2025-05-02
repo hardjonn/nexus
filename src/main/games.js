@@ -12,6 +12,7 @@ import { Jimp } from 'jimp';
 import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
+import { uploadDirectoryWithRsync } from './transfer';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -72,70 +73,50 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     return game;
   }
 
+  if (!config.client.games_lib_path.trim()) {
+    console.error('Games lib path client config is not specified');
+    game.errors.push({
+      message: 'Games lib path client config is not specified',
+    });
+    return game;
+  }
+
+  // get the list of all available/configured game libs locations
+  // they are being stored in the following format
+  // /path/to/game/lib;/another/path/to/game/lib;/and/so/on
+  const gameLibPathList = config.client.games_lib_path.split(';');
+
+  for (const localGamesLibPath of gameLibPathList) {
+    const localGamePath = path.join(localGamesLibPath, game.clientLocation);
+    console.log('Local Game Path:', localGamePath);
+
+    if (!fs.existsSync(localGamePath)) {
+      console.log('Game not found at the following location: ' + localGamePath);
+      continue; // Skip to the next disk if the path doesn't exist
+    }
+
+    console.log('Found local game path:', localGamePath);
+
+    try {
+      const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
+
+      console.log('Local Game Hash:', localHash);
+      console.log('Local Game Size:', localSizeInBytes);
+
+      game.realLocalGamePath = localGamePath;
+      game.localHash = localHash;
+      game.localSizeInBytes = localSizeInBytes;
+    } catch (error) {
+      console.error('Error getting local directory hash and size:', error);
+      game.errors.push({
+        message: `Error getting local directory hash and size: ${error.message}`,
+      });
+    }
+
+    break;
+  }
+
   try {
-    for (const disk of disks) {
-      const mountPoint = disk.mounted;
-
-      const localGamePath = path.join(mountPoint, config.client.games_lib_path, game.clientLocation);
-      console.log('Local Game Path:', localGamePath);
-
-      if (!fs.existsSync(localGamePath)) {
-        continue; // Skip to the next disk if the path doesn't exist
-      }
-
-      console.log('Found local game path:', localGamePath);
-
-      try {
-        const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
-
-        console.log('Local Game Hash:', localHash);
-        console.log('Local Game Size:', localSizeInBytes);
-
-        game.realLocalGamePath = localGamePath;
-        game.localHash = localHash;
-        game.localSizeInBytes = localSizeInBytes;
-      } catch (error) {
-        console.error('Error getting local directory hash and size:', error);
-        game.errors.push({
-          message: `Error getting local directory hash and size: ${error.message}`,
-        });
-      }
-
-      break;
-    }
-
-    try {
-      const localPrefixPath = path.join(config.client.prefixes_path, game.prefixLocation);
-      console.log('Local Prefix Path:', localPrefixPath);
-      game.realLocalPrefixPath = localPrefixPath;
-
-      const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(localPrefixPath);
-      game.localPrefixHash = localPrefixHash;
-      game.localPrefixSizeInBytes = localPrefixSizeInBytes;
-    } catch (error) {
-      console.error('Error getting local prefix hash and size:', error);
-      game.errors.push({
-        message: `Error getting local prefix hash and size: ${error.message}`,
-      });
-    }
-
-    try {
-      const remotePrefixPath = path.join(config.nas.prefixes_path, 'initial', game.prefixLocation);
-      console.log('Remote Prefix Path:', remotePrefixPath);
-
-      const { hash: remotePrefixHash, sizeInBytes: remotePrefixSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remotePrefixPath);
-      console.log('Remote Initial Prefix Hash:', remotePrefixHash);
-      console.log('Remote Initial Prefix Size:', remotePrefixSizeInBytes);
-
-      game.remotePrefixHash = remotePrefixHash;
-      game.remotePrefixSizeInBytes = remotePrefixSizeInBytes;
-    } catch (error) {
-      console.error('Error getting remote initial prefix hash and size:', error);
-      game.errors.push({
-        message: `Error getting remote initial prefix hash and size: ${error.message}`,
-      });
-    }
-
     const remoteGamePath = path.join(config.nas.games_lib_path, game.nasLocation);
     console.log('Remote Game Path:', remoteGamePath);
 
@@ -152,7 +133,44 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     });
   }
 
-  console.log(game);
+  // skip the prefix evaluation if the prefix is not specified
+  // not all games are having prefixes, for example PS2/PS3 games
+  // (and other simulators) do not have any prefix locations
+  if (!game.prefixLocation) {
+    return game;
+  }
+
+  try {
+    const localPrefixPath = path.join(config.client.prefixes_path, game.prefixLocation);
+    console.log('Local Prefix Path:', localPrefixPath);
+    game.realLocalPrefixPath = localPrefixPath;
+
+    const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(localPrefixPath);
+    game.localPrefixHash = localPrefixHash;
+    game.localPrefixSizeInBytes = localPrefixSizeInBytes;
+  } catch (error) {
+    console.error('Error getting local prefix hash and size:', error);
+    game.errors.push({
+      message: `Error getting local prefix hash and size: ${error.message}`,
+    });
+  }
+
+  try {
+    const remotePrefixPath = path.join(config.nas.prefixes_path, 'initial', game.prefixLocation);
+    console.log('Remote Prefix Path:', remotePrefixPath);
+
+    const { hash: remotePrefixHash, sizeInBytes: remotePrefixSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remotePrefixPath);
+    console.log('Remote Initial Prefix Hash:', remotePrefixHash);
+    console.log('Remote Initial Prefix Size:', remotePrefixSizeInBytes);
+
+    game.remotePrefixHash = remotePrefixHash;
+    game.remotePrefixSizeInBytes = remotePrefixSizeInBytes;
+  } catch (error) {
+    console.error('Error getting remote initial prefix hash and size:', error);
+    game.errors.push({
+      message: `Error getting remote initial prefix hash and size: ${error.message}`,
+    });
+  }
 
   return game;
 }
@@ -404,14 +422,17 @@ async function saveGameItem(steamAppId, gameItem) {
         // use that as a baseline or their own ones if existed
         // ...
         // prefix might be optional for PS2/PS3 and some other games/launchers
-        const config = getConfig();
-        const prefixesBasePath = config.client.prefixes_path;
-        const prefixPath = path.join(prefixesBasePath, gameItem.prefixLocation);
-        console.log('prefixesPath: ' + prefixPath);
 
-        const { hash: prefixHash, sizeInBytes: prefixSizeInBytes } = await getLocalDirectoryHashAndSize(prefixPath);
-        gameItem.prefixHash = prefixHash;
-        gameItem.sizeInBytes = prefixSizeInBytes;
+        if (gameItem.launcher === 'PORT_PROTON') {
+          const config = getConfig();
+          const prefixesBasePath = config.client.prefixes_path;
+          const prefixPath = path.join(prefixesBasePath, gameItem.prefixLocation);
+          console.log('prefixesPath: ' + prefixPath);
+
+          const { hash: prefixHash, sizeInBytes: prefixSizeInBytes } = await getLocalDirectoryHashAndSize(prefixPath);
+          gameItem.prefixHash = prefixHash;
+          gameItem.sizeInBytes = prefixSizeInBytes;
+        }
       } catch (error) {
         console.log('Failed to create and save game item to the database: getLocalDirectoryHashAndSize');
         return {
@@ -487,7 +508,7 @@ function validateGameItem(gameItem) {
     errors.push(`Empty field: clientLocation ("${gameItem.clientLocation}")`);
   }
 
-  if (!gameItem.prefixLocation || !gameItem.prefixLocation.trim()) {
+  if (gameItem.launcher === 'PORT_PROTON' && (!gameItem.prefixLocation || !gameItem.prefixLocation.trim())) {
     console.log('validateGameItem: prefixLocation is empty');
     errors.push(`Empty field: prefixLocation ("${gameItem.prefixLocation}")`);
   }
@@ -510,4 +531,12 @@ function validateGameItem(gameItem) {
   return errors;
 }
 
-export { getGames, uploadIcon, saveGameItem };
+async function uploadGameToRemote(steamAppId, gameItem) {
+  try {
+    await uploadDirectoryWithRsync('/local/path', 'user@host:/remote/path', {}, console.log);
+  } catch (error) {
+    console.error('Upload failed:', error);
+  }
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote };

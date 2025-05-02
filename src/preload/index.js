@@ -14,6 +14,7 @@ const gamesAPI = {
   getGames: () => electronAPI.ipcRenderer.invoke('games/get'),
   uploadIcon: (steamAppId, filePath) => electronAPI.ipcRenderer.invoke('games/icon/upload', steamAppId, filePath),
   saveGameItem: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/save', steamAppId, gameItem),
+  uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

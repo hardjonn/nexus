@@ -1,7 +1,7 @@
 <script setup>
-import { computed, reactive, toRaw } from 'vue';
+import { computed, reactive, toRaw, watch } from 'vue';
 const { webUtils } = require('electron');
-import { uploadIcon, saveGameItem } from '../games.js';
+import { uploadIcon, saveGameItem, uploadGameToRemote } from '../games.js';
 
 const props = defineProps({
   gameItem: {
@@ -17,6 +17,7 @@ const data = reactive({
 
   isEditing: false,
   isSaving: false,
+  isUploading: false,
 
   errorMessage: null,
   progressMessage: null,
@@ -25,6 +26,13 @@ const data = reactive({
 
   gameItem: { ...props.gameItem },
 });
+
+watch(
+  () => props.gameItem,
+  () => {
+    data.gameItem = { ...props.gameItem };
+  }
+);
 
 const currentIcon = computed(() => {
   if (data.iconPreview) {
@@ -117,6 +125,22 @@ const remoteState = computed(() => {
   }
 
   return state;
+});
+
+const shouldShowUploadToRemoteButton = computed(() => {
+  if (data.gameItem.source === 'steam') {
+    return false;
+  }
+
+  if (data.gameItem.status !== 'DRAFT') {
+    return false;
+  }
+
+  if (data.isEditing || data.isSaving || data.isUploading) {
+    return false;
+  }
+
+  return true;
 });
 
 console.log('GameItem props:', data.gameItem);
@@ -229,6 +253,18 @@ async function onActionSave() {
   }
 }
 
+async function onActionUploadGameToRemote() {
+  data.isUploading = true;
+  data.errorMessage = null;
+  data.progressMessage = 'Uploading game to the Remote/NAS...';
+  data.successMessage = null;
+  data.errors = null;
+}
+
+async function onActionCancelUploadGameToRemote() {
+  // todo: send a cancellation request
+}
+
 // const emit = defineEmits(['openGame', 'deleteGame', 'editGame']);
 // const game = ref(props.game);
 </script>
@@ -274,17 +310,35 @@ async function onActionSave() {
         <button
           v-if="!data.isEditing && !data.isSaving"
           type="button"
-          class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
           @click="onActionEdit"
         >
           Edit
         </button>
 
         <button
+          v-if="shouldShowUploadToRemoteButton"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+          @click="onActionUploadGameToRemote"
+        >
+          Upload Game To NAS
+        </button>
+
+        <button
+          v-if="data.isUploading"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+          @click="onActionCancelUploadGameToRemote"
+        >
+          Cancel Game Upload
+        </button>
+
+        <button
           v-if="data.isSaving"
           disabled
           type="button"
-          class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
         >
           <svg aria-hidden="true" role="status" class="inline w-4 h-4 me-3 text-white animate-spin" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path

@@ -10,4 +10,8 @@ function saveGameItem(steamAppId, gameItem) {
   return window.gamesAPI.saveGameItem(steamAppId, gameItem);
 }
 
-export { getGames, uploadIcon, saveGameItem };
+function uploadGameToRemote(steamAppId, gameItem) {
+  return window.gamesAPI.uploadGameToRemote(steamAppId, gameItem);
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote };
