@@ -225,7 +225,7 @@ async function onActionSave() {
     delete rawGameItem.errors;
     console.log('Raw Game Item: ', rawGameItem);
 
-    const response = await saveGameItem(props.gameItem.steamAppId, toRaw(data.gameItem));
+    const response = await saveGameItem(props.gameItem.steamAppId, rawGameItem);
     console.log(response);
 
     if (!response) {
@@ -259,6 +259,27 @@ async function onActionUploadGameToRemote() {
   data.progressMessage = 'Uploading game to the Remote/NAS...';
   data.successMessage = null;
   data.errors = null;
+
+  const rawGameItem = toRaw(data.gameItem);
+  delete rawGameItem.errors;
+  console.log('Raw Game Item: ', rawGameItem);
+
+  const response = await uploadGameToRemote(props.gameItem.steamAppId, rawGameItem);
+  console.log(response);
+
+  data.isUploading = false;
+  data.progressMessage = null;
+
+  if (!response) {
+    data.errorMessage = 'Something went wrong while uploading the game to the remote.';
+    return;
+  }
+
+  if (!response.success) {
+    data.errorMessage = response.message || 'Something went wrong while uploading the game to the remote.';
+    data.errors = response.errors;
+    return;
+  }
 }
 
 async function onActionCancelUploadGameToRemote() {

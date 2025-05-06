@@ -12,7 +12,7 @@ import { Jimp } from 'jimp';
 import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
-import { uploadDirectoryWithRsync } from './transfer';
+import { uploadWithRsync } from './transfer';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -531,12 +531,66 @@ function validateGameItem(gameItem) {
   return errors;
 }
 
-async function uploadGameToRemote(steamAppId, gameItem) {
+async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
+  const config = getConfig();
+  const remotePath = path.join(config.nas.games_lib_path, gameItem.nasLocation);
+
+  console.log('remotePath: ' + remotePath);
+  console.log('gameItem.realLocalGamePath: ' + gameItem.realLocalGamePath);
+
   try {
-    await uploadDirectoryWithRsync('/local/path', 'user@host:/remote/path', {}, console.log);
+    // 1. upload the game to the remote
+    await uploadWithRsync({
+      sourcePath: gameItem.realLocalGamePath,
+      destinationPath: remotePath,
+      host: config.nas.host,
+      username: config.nas.user,
+      privateKeyPath: config.nas.private_key_path,
+      onProgress: (output) => {
+        progressCallback(output);
+      },
+    });
+
+    console.log('Upload completed successfully!');
   } catch (error) {
     console.error('Upload failed:', error);
+
+    return {
+      success: false,
+      message: 'Failed to upload game to remote: ' + error,
+    };
   }
+
+  // try {
+  //   // 2. upload the prefix if needed
+  //   if (gameItem.launcher === 'PORT_PROTON') {
+  //     const prefixPath = path.join(config.client.prefixes_path, gameItem.prefixLocation);
+  //     console.log('prefixPath: ' + prefixPath);
+
+  //     await uploadWithRsync({
+  //       sourcePath: prefixPath,
+  //       destinationPath: remotePath,
+  //       host: config.nas.host,
+  //       username: config.nas.user,
+  //       privateKeyPath: config.nas.private_key_path,
+  //       onProgress: (output) => {
+  //         console.log('output: ' + output);
+  //       },
+  //     });
+  //   }
+  // } catch (error) {
+  //   console.error('Upload failed:', error);
+
+  //   return {
+  //     success: false,
+  //     message: 'Failed to upload game to remote: ' + error,
+  //   };
+  // }
+
+  return {
+    success: true,
+    message: 'Upload completed successfully!',
+  };
 }
 
 export { getGames, uploadIcon, saveGameItem, uploadGameToRemote };

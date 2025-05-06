@@ -17,6 +17,10 @@ const gamesAPI = {
   uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
 };
 
+electronAPI.ipcRenderer.on('progress', (event, data) => {
+  console.log('progress', data);
+});
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.

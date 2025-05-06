@@ -6,6 +6,8 @@ const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
 import { getGames, uploadIcon, saveGameItem, uploadGameToRemote } from './games';
 
+let progressCallback = null;
+
 function createWindow() {
   // retrieve the window bounds from the config
   const windowBounds = getConfigApp_WindowBounds();
@@ -62,6 +64,8 @@ function createWindow() {
     shell.openExternal(details.url);
     return { action: 'deny' };
   });
+
+  progressCallback = (data) => mainWindow.webContents.send('progress', data);
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -142,5 +146,5 @@ ipcMain.handle('games/item/save', async (event, steamAppId, gameItem) => {
 
 ipcMain.handle('games/item/upload', async (event, steamAppId, gameItem) => {
   console.log('games/item/upload', steamAppId, gameItem);
-  return await uploadGameToRemote(steamAppId, gameItem);
+  return await uploadGameToRemote(steamAppId, gameItem, progressCallback);
 });
