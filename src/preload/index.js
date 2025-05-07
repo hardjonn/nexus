@@ -1,6 +1,17 @@
 import { contextBridge } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 
+// progress observers list
+const progressObservers = [];
+
+function addObserverToProgress(progressObserver) {
+  progressObservers.push(progressObserver);
+}
+
+function notifyProgressObservers(data) {
+  progressObservers.forEach((observer) => observer(data));
+}
+
 // Custom APIs for renderer
 const api = {};
 
@@ -15,10 +26,13 @@ const gamesAPI = {
   uploadIcon: (steamAppId, filePath) => electronAPI.ipcRenderer.invoke('games/icon/upload', steamAppId, filePath),
   saveGameItem: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/save', steamAppId, gameItem),
   uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
+  abortGameUpload: (itemId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', itemId),
+  subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
 };
 
 electronAPI.ipcRenderer.on('progress', (event, data) => {
   console.log('progress', data);
+  notifyProgressObservers(data);
 });
 
 // Use `contextBridge` APIs to expose Electron APIs to

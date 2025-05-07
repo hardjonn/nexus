@@ -14,4 +14,8 @@ function uploadGameToRemote(steamAppId, gameItem) {
   return window.gamesAPI.uploadGameToRemote(steamAppId, gameItem);
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote };
+function abortGameUpload(itemId) {
+  return window.gamesAPI.abortGameUpload(itemId);
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload };

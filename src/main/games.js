@@ -12,7 +12,7 @@ import { Jimp } from 'jimp';
 import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
-import { uploadWithRsync } from './transfer';
+import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -531,6 +531,12 @@ function validateGameItem(gameItem) {
   return errors;
 }
 
+async function abortRsyncTransfer(itemId) {
+  console.log('abortRsyncTransfer', itemId);
+
+  return await abortRsyncTransferByItemId(itemId);
+}
+
 async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   const config = getConfig();
   const remotePath = path.join(config.nas.games_lib_path, gameItem.nasLocation);
@@ -541,13 +547,15 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   try {
     // 1. upload the game to the remote
     await uploadWithRsync({
+      abortId: steamAppId,
       sourcePath: gameItem.realLocalGamePath,
       destinationPath: remotePath,
       host: config.nas.host,
       username: config.nas.user,
       privateKeyPath: config.nas.private_key_path,
       onProgress: (output) => {
-        progressCallback(output);
+        const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
+        progressCallback(augmentedWithSteamAppIdOutput);
       },
     });
 
@@ -593,4 +601,10 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   };
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote };
+function augmentOutputWithProgressId(output, steamAppId) {
+  output.progressId = `steamAppId-${steamAppId}`;
+
+  return output;
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer };

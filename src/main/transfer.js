@@ -126,6 +126,31 @@
 const { spawn } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 const path = require('path');
+const AbortController = require('abort-controller');
+
+const abortControllers = new Map();
+
+async function abortRsyncTransferByItemId(itemId) {
+  try {
+    const controller = abortControllers.get(itemId);
+    if (controller) {
+      controller.abort();
+      abortControllers.delete(itemId);
+    }
+
+    return {
+      success: true,
+      message: 'Rsync transfer aborted successfully',
+    };
+  } catch (error) {
+    console.error('Error aborting rsync transfer:', error);
+
+    return {
+      success: false,
+      message: 'Failed to abort rsync transfer: ' + error,
+    };
+  }
+}
 
 /**
  * Uploads a local directory to a remote host using rsync over SSH with a private key.
@@ -138,7 +163,7 @@ const path = require('path');
  * @param {function(string, number): void} [options.onProgress] - Optional callback for progress updates with percentage.
  * @returns {Promise<void>}
  */
-async function uploadWithRsync({ sourcePath, destinationPath, host, username, privateKeyPath, onProgress }) {
+async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, username, privateKeyPath, onProgress }) {
   // first try to create the remote directory
   // if it fails, reject the promise
   // if it succeeds, continue
@@ -178,7 +203,11 @@ async function uploadWithRsync({ sourcePath, destinationPath, host, username, pr
 
     const rsyncArguments = ['-avzh', '--info=progress2', '--safe-links', '-e', sshCommand, sourcePathWithTrailingSlash, destinationPathWithTrailingSlash];
 
-    const rsync = spawn('rsync', rsyncArguments);
+    const controller = new AbortController();
+    abortControllers.set(abortId, controller);
+    const { signal } = controller;
+
+    const rsync = spawn('rsync', rsyncArguments, { signal });
 
     rsync.stdout.on('data', (data) => {
       const processedOutput = processedRsyncOutput(data.toString());
@@ -191,6 +220,8 @@ async function uploadWithRsync({ sourcePath, destinationPath, host, username, pr
     });
 
     rsync.on('close', (code) => {
+      abortControllers.delete(abortId);
+
       if (code === 0) {
         resolve();
       } else {
@@ -201,6 +232,8 @@ async function uploadWithRsync({ sourcePath, destinationPath, host, username, pr
     rsync.on('error', (err) => {
       reject(err);
     });
+
+    // add support for cancellation/aborting the upload
   });
 }
 
@@ -268,7 +301,7 @@ async function makeDirectoryOnRemote(host, username, privateKeyPath, remoteDirPa
   }
 }
 
-export { uploadWithRsync };
+export { uploadWithRsync, abortRsyncTransferByItemId };
 
 // module.exports = uploadWithRsync;
 

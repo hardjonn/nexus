@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { getGames } from '../games.js';
+import { progress } from '../progress.js';
 import GameItem from './GameItem.vue';
 
 const loading = ref(false);
@@ -237,7 +238,7 @@ const filteredAndSortedGames = computed(() => {
 
   <div v-if="filteredAndSortedGames.length > 0" class="game-list">
     <div v-for="game in filteredAndSortedGames" :key="game.steamAppId" class="game-item">
-      <GameItem :game-item="game" />
+      <GameItem :game-item="game" :progress="progress[`steamAppId-${game.steamAppId}`]" />
     </div>
   </div>
 </template>

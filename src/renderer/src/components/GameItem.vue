@@ -1,12 +1,16 @@
 <script setup>
 import { computed, reactive, toRaw, watch } from 'vue';
 const { webUtils } = require('electron');
-import { uploadIcon, saveGameItem, uploadGameToRemote } from '../games.js';
+import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload } from '../games.js';
 
 const props = defineProps({
   gameItem: {
     type: Object,
     required: true,
+  },
+  progress: {
+    type: Object,
+    required: false,
   },
 });
 
@@ -24,13 +28,29 @@ const data = reactive({
   successMessage: null,
   errors: null,
 
+  progressContent: null,
+  showProgressContent: false,
+
   gameItem: { ...props.gameItem },
+  progress: props.progress,
 });
 
 watch(
   () => props.gameItem,
   () => {
     data.gameItem = { ...props.gameItem };
+  }
+);
+watch(
+  () => props.progress,
+  () => {
+    data.progress = props.progress;
+
+    if (!data.progressContent) {
+      data.progressContent = '';
+    }
+
+    data.progressContent += props.progress.rawOutput;
   }
 );
 
@@ -259,6 +279,8 @@ async function onActionUploadGameToRemote() {
   data.progressMessage = 'Uploading game to the Remote/NAS...';
   data.successMessage = null;
   data.errors = null;
+  data.progress = null;
+  data.progressContent = null;
 
   const rawGameItem = toRaw(data.gameItem);
   delete rawGameItem.errors;
@@ -269,6 +291,7 @@ async function onActionUploadGameToRemote() {
 
   data.isUploading = false;
   data.progressMessage = null;
+  data.progress = null;
 
   if (!response) {
     data.errorMessage = 'Something went wrong while uploading the game to the remote.';
@@ -277,13 +300,24 @@ async function onActionUploadGameToRemote() {
 
   if (!response.success) {
     data.errorMessage = response.message || 'Something went wrong while uploading the game to the remote.';
-    data.errors = response.errors;
     return;
   }
+
+  data.successMessage = 'Game uploaded successfully!';
 }
 
 async function onActionCancelUploadGameToRemote() {
-  // todo: send a cancellation request
+  const response = await abortGameUpload(props.gameItem.steamAppId);
+
+  if (!response) {
+    data.errorMessage = 'Something went wrong while canceling the upload.';
+    return;
+  }
+
+  if (!response.success) {
+    data.errorMessage = response.message || 'Something went wrong while canceling the upload.';
+    return;
+  }
 }
 
 // const emit = defineEmits(['openGame', 'deleteGame', 'editGame']);
@@ -292,7 +326,7 @@ async function onActionCancelUploadGameToRemote() {
 
 <template>
   <div class="w-full flex flex-col mt-4 items-start justify-between border rounded-lg shadow-sm md:flex-row dark:border-gray-700 dark:bg-gray-800">
-    <div class="">
+    <div class="w-48">
       <div class="relative w-full rounded-t-lg h-96 md:h-auto md:w-48 md:rounded-none md:rounded-s-lg">
         <img class="object-cover w-full" :src="currentIcon" alt="" />
 
@@ -340,7 +374,7 @@ async function onActionCancelUploadGameToRemote() {
         <button
           v-if="shouldShowUploadToRemoteButton"
           type="button"
-          class="text-white w-full bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+          class="text-white w-full bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
           @click="onActionUploadGameToRemote"
         >
           Upload Game To NAS
@@ -349,10 +383,28 @@ async function onActionCancelUploadGameToRemote() {
         <button
           v-if="data.isUploading"
           type="button"
-          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2"
+          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
           @click="onActionCancelUploadGameToRemote"
         >
           Cancel Game Upload
+        </button>
+
+        <div v-if="data.isUploading && data.progress">
+          <div class="mt-2 mb-2 text-base font-medium text-center text-green-700 dark:text-green-500">{{ data.progress.transferred }} | {{ data.progress.speed }}</div>
+          <div class="w-full h-4 mb-4 bg-gray-200 rounded-full dark:bg-gray-700">
+            <div class="h-4 dark:bg-green-500 text-xs font-medium text-center p-0.5 leading-none rounded-full" :style="{ width: data.progress.percentage }">
+              {{ data.progress.percentage }}
+            </div>
+          </div>
+        </div>
+
+        <button
+          v-if="data.progressContent"
+          type="button"
+          class="text-white w-full bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-bl dark:focus:ring-pink-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+          @click="data.showProgressContent = !data.showProgressContent"
+        >
+          {{ data.showProgressContent ? 'Hide Progress' : 'Show Progress' }}
         </button>
 
         <button
@@ -394,7 +446,13 @@ async function onActionCancelUploadGameToRemote() {
       </div>
     </div>
 
-    <div class="flex flex-col justify-between p-4 leading-normal flex-grow">
+    <div class="flex flex-col justify-between p-4 leading-normal flex-grow relative">
+      <div v-if="data.showProgressContent && data.progressContent" class="absolute top-2 left-2 right-2 bottom-2 dark:bg-gray-700 dark:text-gray-400">
+        <div class="p-4 w-full h-full overflow-auto">
+          <pre v-html="data.progressContent"></pre>
+        </div>
+      </div>
+
       <div class="grid gap-6 grid-cols-[20fr_80fr] mb-2">
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Title:</span>
         <input
