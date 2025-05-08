@@ -144,4 +144,24 @@ async function db_createGameItemFromSteamData(steamAppId, gameItem) {
   }
 }
 
-export { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData };
+async function db_updateGameState(steamAppId, state) {
+  try {
+    await Game.update(
+      {
+        status: state,
+      },
+      {
+        where: {
+          steam_app_id: steamAppId,
+        },
+      }
+    );
+    console.log(`Game state ${steamAppId} updated successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error updating game state:', error);
+    return false;
+  }
+}
+
+export { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData, db_updateGameState };

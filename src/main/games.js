@@ -9,7 +9,7 @@ const execPromise = promisify(exec);
 const { NodeSSH } = require('node-ssh');
 import { Jimp } from 'jimp';
 
-import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData } from './game.queries';
+import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData, db_updateGameState } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
@@ -406,40 +406,47 @@ async function saveGameItem(steamAppId, gameItem) {
         gameItem.icon = resizedImage;
       }
 
+      // do not calculate and store hash/size for steam games here
+      // we do it when the game is uploaded to the remote
+
       // we also need to calculate the local hash and size based on the given path
       // if it's not possible (wrong local path is given) then we cannot create
       // the game in the DB -- we need a hash/size baseline
       // and if the game is being created from a Steam game instance
       // that means the game exists and should be possible to calculate
       // the hash/size pair
-      try {
-        const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(gameItem.realLocalGamePath);
-        gameItem.hash = localHash;
-        gameItem.sizeInBytes = localSizeInBytes;
+      // try {
+      //   const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(gameItem.realLocalGamePath);
+      //   console.log('==============localHash: ' + localHash);
+      //   console.log('==============localSizeInBytes: ' + localSizeInBytes);
+      //   gameItem.hash = localHash;
+      //   gameItem.sizeInBytes = localSizeInBytes;
 
-        // get hash and size for the local prefix, which will be the initial prefix
-        // initial prefix won't change once created, every Steam account will
-        // use that as a baseline or their own ones if existed
-        // ...
-        // prefix might be optional for PS2/PS3 and some other games/launchers
+      //   // get hash and size for the local prefix, which will be the initial prefix
+      //   // initial prefix won't change once created, every Steam account will
+      //   // use that as a baseline or their own ones if existed
+      //   // ...
+      //   // prefix might be optional for PS2/PS3 and some other games/launchers
 
-        if (gameItem.launcher === 'PORT_PROTON') {
-          const config = getConfig();
-          const prefixesBasePath = config.client.prefixes_path;
-          const prefixPath = path.join(prefixesBasePath, gameItem.prefixLocation);
-          console.log('prefixesPath: ' + prefixPath);
+      //   if (gameItem.launcher === 'PORT_PROTON') {
+      //     const config = getConfig();
+      //     const prefixesBasePath = config.client.prefixes_path;
+      //     const prefixPath = path.join(prefixesBasePath, gameItem.prefixLocation);
+      //     console.log('prefixesPath: ' + prefixPath);
 
-          const { hash: prefixHash, sizeInBytes: prefixSizeInBytes } = await getLocalDirectoryHashAndSize(prefixPath);
-          gameItem.prefixHash = prefixHash;
-          gameItem.sizeInBytes = prefixSizeInBytes;
-        }
-      } catch (error) {
-        console.log('Failed to create and save game item to the database: getLocalDirectoryHashAndSize');
-        return {
-          success: false,
-          message: 'Failed to create game item; getLocalDirectoryHashAndSize error: ' + error,
-        };
-      }
+      //     const { hash: prefixHash, sizeInBytes: prefixSizeInBytes } = await getLocalDirectoryHashAndSize(prefixPath);
+      //     console.log('==============prefixHash: ' + prefixHash);
+      //     console.log('==============prefixSizeInBytes: ' + prefixSizeInBytes);
+      //     gameItem.prefixHash = prefixHash;
+      //     gameItem.prefixSizeInBytes = prefixSizeInBytes;
+      //   }
+      // } catch (error) {
+      //   console.log('Failed to create and save game item to the database: getLocalDirectoryHashAndSize');
+      //   return {
+      //     success: false,
+      //     message: 'Failed to create game item; getLocalDirectoryHashAndSize error: ' + error,
+      //   };
+      // }
 
       result = await db_createGameItemFromSteamData(steamAppId, gameItem);
     } else {
@@ -537,19 +544,47 @@ async function abortRsyncTransfer(itemId) {
   return await abortRsyncTransferByItemId(itemId);
 }
 
+// the idea it that the game item is uploaded only once in the beginning
+// when it's created we also upload the initial prefix if needed (for PORT_PROTON)
+// after that the prefix is frozen and cannot be changed
+// unless it'e enforced by the user
+// the game is available for upload only when it's in DRAFT/UPDATING state
 async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
-  const config = getConfig();
-  const remotePath = path.join(config.nas.games_lib_path, gameItem.nasLocation);
+  // run some validations
+  if (gameItem.source !== 'db' || (gameItem.status !== 'DRAFT' && gameItem.status !== 'UPLOADING')) {
+    console.log('Game is not in DRAFT state');
+    return {
+      success: false,
+      message: 'Game is not in DRAFT state',
+    };
+  }
 
-  console.log('remotePath: ' + remotePath);
-  console.log('gameItem.realLocalGamePath: ' + gameItem.realLocalGamePath);
+  // 0. update the game state to uploading
+  try {
+    await db_updateGameState(steamAppId, 'UPLOADING');
+  } catch (error) {
+    console.error('Error updating game state to uploading:', error);
+    return {
+      success: false,
+      message: 'Failed to update game state to uploading: ' + error,
+    };
+  }
+
+  const config = getConfig();
+  const localGamePath = gameItem.realLocalGamePath;
+  const remoteGamePath = path.join(config.nas.games_lib_path, gameItem.nasLocation);
+  const localPrefixPath = path.join(config.client.prefixes_path, gameItem.prefixLocation);
+  const remotePrefixPath = path.join(config.nas.prefixes_path, 'initial', gameItem.prefixLocation);
+
+  console.log('remoteGamePath: ' + remoteGamePath);
+  console.log('localGamePath: ' + localGamePath);
 
   try {
     // 1. upload the game to the remote
     await uploadWithRsync({
       abortId: steamAppId,
-      sourcePath: gameItem.realLocalGamePath,
-      destinationPath: remotePath,
+      sourcePath: localGamePath,
+      destinationPath: remoteGamePath,
       host: config.nas.host,
       username: config.nas.user,
       privateKeyPath: config.nas.private_key_path,
@@ -569,36 +604,109 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
     };
   }
 
-  // try {
-  //   // 2. upload the prefix if needed
-  //   if (gameItem.launcher === 'PORT_PROTON') {
-  //     const prefixPath = path.join(config.client.prefixes_path, gameItem.prefixLocation);
-  //     console.log('prefixPath: ' + prefixPath);
+  try {
+    // 2. upload the prefix if needed
+    //  - the launcher has to be PORT_PROTON
+    //  - the remote initial prefix has to be empty - record in the DB should not exist
+    if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash) {
+      console.log('localPrefixPath: ' + localPrefixPath);
+      console.log('remotePrefixPath: ' + remotePrefixPath);
 
-  //     await uploadWithRsync({
-  //       sourcePath: prefixPath,
-  //       destinationPath: remotePath,
-  //       host: config.nas.host,
-  //       username: config.nas.user,
-  //       privateKeyPath: config.nas.private_key_path,
-  //       onProgress: (output) => {
-  //         console.log('output: ' + output);
-  //       },
-  //     });
-  //   }
-  // } catch (error) {
-  //   console.error('Upload failed:', error);
+      await uploadWithRsync({
+        sourcePath: localPrefixPath,
+        destinationPath: remotePrefixPath,
+        host: config.nas.host,
+        username: config.nas.user,
+        privateKeyPath: config.nas.private_key_path,
+        onProgress: (output) => {
+          const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
+          progressCallback(augmentedWithSteamAppIdOutput);
+        },
+      });
 
-  //   return {
-  //     success: false,
-  //     message: 'Failed to upload game to remote: ' + error,
-  //   };
-  // }
+      console.log('Upload prefix completed successfully!');
+    }
+  } catch (error) {
+    console.error('Upload prefix failed:', error);
 
-  return {
-    success: true,
-    message: 'Upload completed successfully!',
-  };
+    return {
+      success: false,
+      message: 'Failed to upload prefix to remote: ' + error,
+    };
+  }
+
+  // 3. calculate the hash and size for the remote and local
+  try {
+    const { hash: localGameHash, sizeInBytes: localGameSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
+    console.log('==============localGameHash: ' + localGameHash);
+    console.log('==============localGameSizeInBytes: ' + localGameSizeInBytes);
+
+    const { hash: remoteGameHash, sizeInBytes: remoteGameSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remoteGamePath);
+    console.log('==============remoteGameHash: ' + remoteGameHash);
+    console.log('==============remoteGameSizeInBytes: ' + remoteGameSizeInBytes);
+
+    // we need to make sure the local game size and hash match the remote
+    if (localGameHash !== remoteGameHash || localGameSizeInBytes !== remoteGameSizeInBytes) {
+      console.log('Local game size and hash do not match remote');
+      return {
+        success: false,
+        message: 'Local game size and hash do not match remote',
+      };
+    }
+
+    gameItem.hash = localGameHash;
+    gameItem.sizeInBytes = localGameSizeInBytes;
+
+    // the prefix check should be done only on the initial upload
+    if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash) {
+      const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(localPrefixPath);
+      console.log('==============localPrefixHash: ' + localPrefixHash);
+      console.log('==============localPrefixSizeInBytes: ' + localPrefixSizeInBytes);
+
+      const { hash: remotePrefixHash, sizeInBytes: remotePrefixSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remotePrefixPath);
+      console.log('==============remotePrefixHash: ' + remotePrefixHash);
+      console.log('==============remotePrefixSizeInBytes: ' + remotePrefixSizeInBytes);
+
+      // we need to make sure the local prefix size and hash match the remote
+      if (localPrefixHash !== remotePrefixHash || localPrefixSizeInBytes !== remotePrefixSizeInBytes) {
+        console.log('Local prefix size and hash do not match remote');
+        return {
+          success: false,
+          message: 'Local prefix size and hash do not match remote',
+        };
+      }
+
+      gameItem.prefixHash = localPrefixHash;
+      gameItem.prefixSizeInBytes = localPrefixSizeInBytes;
+    }
+  } catch (error) {
+    console.error('Error calculating hash and size:', error);
+    return {
+      success: false,
+      message: 'Failed to calculate hash and size: ' + error,
+    };
+  }
+
+  // 4. update the game item in the DB
+  try {
+    console.log('Updating game item in the DB...');
+    gameItem.status = 'ACTIVE';
+
+    const result = await db_updateGameItem(steamAppId, gameItem);
+    const game = await adjustedGameWithLocalAndRemoteDetails(result);
+
+    return {
+      success: true,
+      message: 'Game item saved successfully',
+      gameItem: game,
+    };
+  } catch (error) {
+    console.error('Error updating game item:', error);
+    return {
+      success: false,
+      message: 'Failed to update game item: ' + error,
+    };
+  }
 }
 
 function augmentOutputWithProgressId(output, steamAppId) {

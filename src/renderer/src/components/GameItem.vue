@@ -152,7 +152,7 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
-  if (data.gameItem.status !== 'DRAFT') {
+  if (data.gameItem.status !== 'DRAFT' && data.gameItem.status !== 'UPLOADING') {
     return false;
   }
 
@@ -302,6 +302,8 @@ async function onActionUploadGameToRemote() {
     data.errorMessage = response.message || 'Something went wrong while uploading the game to the remote.';
     return;
   }
+
+  data.gameItem = { ...response.gameItem };
 
   data.successMessage = 'Game uploaded successfully!';
 }
