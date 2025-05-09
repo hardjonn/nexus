@@ -607,11 +607,19 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
     };
   }
 
+  if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixLocation) {
+    console.log('Prefix location is empty');
+    return {
+      success: false,
+      message: 'Prefix location is empty',
+    };
+  }
+
   const config = getConfig();
   const localGamePath = gameItem.realLocalGamePath;
   const remoteGamePath = path.join(config.nas.games_lib_path, gameItem.nasLocation);
-  const localPrefixPath = path.join(config.client.prefixes_path, gameItem.prefixLocation);
-  const remotePrefixPath = path.join(config.nas.prefixes_path, 'initial', gameItem.prefixLocation);
+  const localPrefixPath = gameItem.prefixLocation ? path.join(config.client.prefixes_path, gameItem.prefixLocation) : null;
+  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.nas.prefixes_path, 'initial', gameItem.prefixLocation) : null;
 
   console.log('remoteGamePath: ' + remoteGamePath);
   console.log('localGamePath: ' + localGamePath);
@@ -645,7 +653,7 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
     // 2. upload the prefix if needed
     //  - the launcher has to be PORT_PROTON
     //  - the remote initial prefix has to be empty - record in the DB should not exist
-    if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash) {
+    if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash && localPrefixPath && remotePrefixPath) {
       console.log('localPrefixPath: ' + localPrefixPath);
       console.log('remotePrefixPath: ' + remotePrefixPath);
 
@@ -730,7 +738,8 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
     gameItem.status = 'ACTIVE';
 
     const result = await db_updateGameItem(steamAppId, gameItem);
-    const game = await adjustedGameWithLocalAndRemoteDetails(result);
+    let game = await augmentGameWithRealLocalGamePath(result);
+    game = await adjustedGameWithLocalAndRemoteDetails(game);
 
     return {
       success: true,
