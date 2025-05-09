@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, toRaw, watch } from 'vue';
 const { webUtils } = require('electron');
-import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload } from '../games.js';
+import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize } from '../games.js';
 
 const props = defineProps({
   gameItem: {
@@ -22,6 +22,7 @@ const data = reactive({
   isEditing: false,
   isSaving: false,
   isUploading: false,
+  isRefreshingHashAndSize: false,
 
   errorMessage: null,
   progressMessage: null,
@@ -322,6 +323,44 @@ async function onActionCancelUploadGameToRemote() {
   }
 }
 
+async function onActionRefreshHashAndSize() {
+  data.isRefreshingHashAndSize = true;
+  data.errorMessage = null;
+  data.progressMessage = 'Refreshing hash and size...';
+  data.successMessage = null;
+  data.errors = null;
+
+  const rawGameItem = toRaw(data.gameItem);
+  delete rawGameItem.errors;
+
+  try {
+    const response = await refreshHashAndSize(props.gameItem.steamAppId, rawGameItem);
+
+    console.log('Refresh Hash and Size Response:', response);
+
+    data.isRefreshingHashAndSize = false;
+
+    if (!response) {
+      data.errorMessage = 'Something went wrong while refreshing the hash and size.';
+      return;
+    }
+
+    if (!response.success) {
+      data.errorMessage = response.message || 'Something went wrong while refreshing the hash and size.';
+      return;
+    }
+
+    data.gameItem = { ...response.gameItem };
+    data.successMessage = 'Hash and size refreshed successfully!';
+  } catch (error) {
+    console.error('Error refreshing hash and size:', error);
+    data.errorMessage = 'An error occurred while refreshing the hash and size: ' + error.message;
+  } finally {
+    data.progressMessage = null;
+    data.isRefreshingHashAndSize = false;
+  }
+}
+
 // const emit = defineEmits(['openGame', 'deleteGame', 'editGame']);
 // const game = ref(props.game);
 </script>
@@ -371,6 +410,16 @@ async function onActionCancelUploadGameToRemote() {
           @click="onActionEdit"
         >
           Edit
+        </button>
+
+        <button
+          v-if="data.gameItem.source === 'db'"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600 hover:bg-gradient-to-br dark:focus:ring-teal-800 shadow-lg dark:shadow-lg dark:shadow-teal-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          :disabled="data.isRefreshingHashAndSize"
+          @click="onActionRefreshHashAndSize"
+        >
+          {{ data.isRefreshingHashAndSize ? 'Refreshing...' : 'Refresh Hash and Size' }}
         </button>
 
         <button
@@ -480,7 +529,7 @@ async function onActionCancelUploadGameToRemote() {
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
-        <span class="text-l font-bold tracking-tight dark:text-white">Local State:</span>
+        <!-- <span class="text-l font-bold tracking-tight dark:text-white">Local State:</span>
         <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
           <li v-for="state in localState" :key="state">{{ state }}</li>
         </ul>
@@ -488,7 +537,7 @@ async function onActionCancelUploadGameToRemote() {
         <span class="text-l font-bold tracking-tight dark:text-white">Remote State:</span>
         <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
           <li v-for="state in remoteState" :key="state">{{ state }}</li>
-        </ul>
+        </ul> -->
 
         <span class="text-l font-bold tracking-tight dark:text-white">Errors</span>
         <ul class="space-y-1 text-gray-500 list-inside dark:text-red-500">

@@ -48,7 +48,7 @@ async function getGames() {
   // locally the game could be located at different places
   // depending where it was installed to
   for (const key in mergedGamesMap) {
-    const game = await adjustedGameWithLocalAndRemoteDetails(mergedGamesMap[key]);
+    const game = await augmentGameWithRealLocalGamePath(mergedGamesMap[key]);
     gamesMap[game.steamAppId] = game;
   }
 
@@ -57,13 +57,8 @@ async function getGames() {
   return Object.values(gamesMap).slice(0, 5);
 }
 
-async function adjustedGameWithLocalAndRemoteDetails(game) {
+async function augmentGameWithRealLocalGamePath(game) {
   const config = getConfig();
-
-  // get the list of all attached drives
-  // because we don't know where the game is installed
-  // that path could be on the internal drive or on an external drive
-  const disks = nodeDiskInfo.getDiskInfoSync();
 
   // if the game is sourced from steam, it doesn't have
   // the clientLocation and nasLocation
@@ -72,6 +67,8 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     // console.log('Skipping game from steam:', game);
     return game;
   }
+
+  game.errors = [];
 
   if (!config.client.games_lib_path.trim()) {
     console.error('Games lib path client config is not specified');
@@ -97,23 +94,63 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
 
     console.log('Found local game path:', localGamePath);
 
-    try {
-      const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
-
-      console.log('Local Game Hash:', localHash);
-      console.log('Local Game Size:', localSizeInBytes);
-
-      game.realLocalGamePath = localGamePath;
-      game.localHash = localHash;
-      game.localSizeInBytes = localSizeInBytes;
-    } catch (error) {
-      console.error('Error getting local directory hash and size:', error);
-      game.errors.push({
-        message: `Error getting local directory hash and size: ${error.message}`,
-      });
-    }
-
+    game.realLocalGamePath = localGamePath;
     break;
+  }
+
+  if (!game.prefixLocation) {
+    return game;
+  }
+
+  const localPrefixPath = path.join(config.client.prefixes_path, game.prefixLocation);
+  console.log('Local Prefix Path:', localPrefixPath);
+
+  if (!fs.existsSync(localPrefixPath)) {
+    return game;
+  }
+
+  game.realLocalPrefixPath = localPrefixPath;
+
+  return game;
+}
+
+async function calculateHashAndSize(steamAppId, gameItem) {
+  gameItem = await adjustedGameWithLocalAndRemoteDetails(gameItem);
+
+  return {
+    success: true,
+    gameItem: gameItem,
+  };
+}
+
+async function adjustedGameWithLocalAndRemoteDetails(game) {
+  // if the game is sourced from steam, it doesn't have
+  // the clientLocation and nasLocation
+  // so we need to skip it
+  if (game.source === 'steam') {
+    // console.log('Skipping game from steam:', game);
+    return game;
+  }
+
+  game.errors = [];
+
+  const config = getConfig();
+
+  console.log('Local game path:', game.realLocalGamePath);
+
+  try {
+    const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(game.realLocalGamePath);
+
+    console.log('Local Game Hash:', localHash);
+    console.log('Local Game Size:', localSizeInBytes);
+
+    game.localHash = localHash;
+    game.localSizeInBytes = localSizeInBytes;
+  } catch (error) {
+    console.error('Error getting local directory hash and size:', error);
+    game.errors.push({
+      message: `Error getting local directory hash and size: ${error.message}`,
+    });
   }
 
   try {
@@ -715,4 +752,4 @@ function augmentOutputWithProgressId(output, steamAppId) {
   return output;
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer };
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize };

@@ -27,6 +27,7 @@ const gamesAPI = {
   saveGameItem: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/save', steamAppId, gameItem),
   uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
   abortGameUpload: (itemId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', itemId),
+  refreshHashAndSize: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/refresh_hash_and_size', steamAppId, gameItem),
   subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
 };
 

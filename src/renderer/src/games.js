@@ -18,4 +18,8 @@ function abortGameUpload(itemId) {
   return window.gamesAPI.abortGameUpload(itemId);
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload };
+function refreshHashAndSize(steamAppId, gameItem) {
+  return window.gamesAPI.refreshHashAndSize(steamAppId, gameItem);
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize };
