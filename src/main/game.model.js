@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 
 function initGameModel(sequelize) {
+  console.log('game.model::initGameModel');
   return sequelize.define('games', {
     steam_app_id: {
       type: DataTypes.STRING,
@@ -21,10 +22,7 @@ function initGameModel(sequelize) {
     icon: {
       type: DataTypes.BLOB,
     },
-    client_location: {
-      type: DataTypes.STRING,
-    },
-    nas_location: {
+    game_location: {
       type: DataTypes.STRING,
     },
     prefix_location: {
@@ -35,10 +33,10 @@ function initGameModel(sequelize) {
       defaultValue: 'NOOP', // Set the default value
       allowNull: false,
     },
-    hash_md5: {
+    game_hash_md5: {
       type: DataTypes.STRING,
     },
-    size_in_bytes: {
+    game_size_in_bytes: {
       type: DataTypes.INTEGER,
     },
     prefix_hash_md5: {

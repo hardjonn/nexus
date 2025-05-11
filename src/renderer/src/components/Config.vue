@@ -16,8 +16,8 @@ const saveOptions = () => {
   const configData = {
     db: toRaw(store.db),
     steam: toRaw(store.steam),
-    nas: toRaw(store.nas),
-    client: toRaw(store.client),
+    remote_lib: toRaw(store.remote_lib),
+    local_lib: toRaw(store.local_lib),
   };
 
   saving.value = true;
@@ -170,36 +170,36 @@ const saveOptions = () => {
     </div>
 
     <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
-      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">NAS/Remote Settings</span>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Remote Settings</span>
     </h2>
     <div class="grid gap-6 mb-6 md:grid-cols-2">
       <div>
-        <label for="nas_host" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote Host</label>
+        <label for="remote_host" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Host</label>
         <input
-          id="nas_host"
-          v-model="store.nas.host"
+          id="remote_host"
+          v-model="store.remote_lib.host"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="nas.host"
+          placeholder="remote.host"
           required
         />
       </div>
       <div>
-        <label for="nas_user" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote User (SSH)</label>
+        <label for="remote_user" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote User (SSH)</label>
         <input
-          id="nas_user"
-          v-model="store.nas.user"
+          id="remote_user"
+          v-model="store.remote_lib.user"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="nas.user"
+          placeholder="remote.user"
           required
         />
       </div>
       <div>
-        <label for="nas_private_key_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote Private Key Path (SSH)</label>
+        <label for="remote_private_key_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Private Key Path (SSH)</label>
         <input
-          id="nas_private_key_path"
-          v-model="store.nas.private_key_path"
+          id="remote_private_key_path"
+          v-model="store.remote_lib.private_key_path"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="/home/user/.ssh/id_rsa"
@@ -207,10 +207,10 @@ const saveOptions = () => {
         />
       </div>
       <div>
-        <label for="nas_games_lib_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote Games Lib Path</label>
+        <label for="remote_games_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Games Path</label>
         <input
-          id="nas_games_lib_path"
-          v-model="store.nas.games_lib_path"
+          id="remote_games_path"
+          v-model="store.remote_lib.games_path"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Nexus/Games"
@@ -218,27 +218,38 @@ const saveOptions = () => {
         />
       </div>
       <div>
-        <label for="nas_prefixes_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">NAS/Remote Prefixes Path</label>
+        <label for="remote_prefixes_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Prefixes Path</label>
         <input
-          id="nas_prefixes_path"
-          v-model="store.nas.prefixes_path"
+          id="remote_prefixes_path"
+          v-model="store.remote_lib.prefixes_path"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Nexus/Prefixes"
           required
         />
       </div>
+      <div>
+        <label for="remote_initial_prefixes" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Initial Prefixes</label>
+        <input
+          id="remote_initial_prefixes"
+          v-model="store.remote_lib.initial_prefixes"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="initial"
+          required
+        />
+      </div>
     </div>
 
     <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
-      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Client/Local Settings</span>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Local Settings</span>
     </h2>
     <div class="grid gap-6 mb-6 md:grid-cols-2">
       <div>
-        <label for="client_games_lib_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Client/Local Games Lib Path</label>
+        <label for="local_games_lib_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Local Games Lib Path</label>
         <input
-          id="client_games_lib_path"
-          v-model="store.client.games_lib_path"
+          id="local_games_lib_path"
+          v-model="store.local_lib.games_lib_path"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Games"
@@ -246,10 +257,10 @@ const saveOptions = () => {
         />
       </div>
       <div>
-        <label for="client_prefixes_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Client/Local Prefixes Path</label>
+        <label for="local_prefixes_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Local Prefixes Path</label>
         <input
-          id="client_prefixes_path"
-          v-model="store.client.prefixes_path"
+          id="local_prefixes_path"
+          v-model="store.local_lib.prefixes_path"
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Prefixes"

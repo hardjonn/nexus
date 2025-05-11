@@ -277,7 +277,7 @@ async function onActionSave() {
 async function onActionUploadGameToRemote() {
   data.isUploading = true;
   data.errorMessage = null;
-  data.progressMessage = 'Uploading game to the Remote/NAS...';
+  data.progressMessage = 'Uploading game to the Remote...';
   data.successMessage = null;
   data.errors = null;
   data.progress = null;
@@ -428,7 +428,7 @@ async function onActionRefreshHashAndSize() {
           class="text-white w-full bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
           @click="onActionUploadGameToRemote"
         >
-          Upload Game To NAS
+          Upload Game To Remote
         </button>
 
         <button
@@ -692,17 +692,17 @@ async function onActionRefreshHashAndSize() {
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Prefix Path:</span>
         <span class="font-normal py-2.5 text-gray-400">{{ data.gameItem.realLocalPrefixPath }}</span>
 
-        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">NAS Location:</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Remote Location:</span>
         <input
-          v-model="data.gameItem.nasLocation"
+          v-model="data.gameItem.remoteLocation"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
           :disabled="!data.isEditing"
         />
 
-        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Client Location:</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Local Location:</span>
         <input
-          v-model="data.gameItem.clientLocation"
+          v-model="data.gameItem.localLocation"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
           :disabled="!data.isEditing"

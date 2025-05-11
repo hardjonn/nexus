@@ -2,74 +2,33 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { readVdf, writeVdf } from 'steam-binary-vdf';
 
+import { makeGameItemFromSteamItem } from './game.item';
 import { getConfig } from './conf';
 
 async function steam_getAllGamesMap() {
-  const shortcutsPath = getVdfShortcutsFullPath();
-  console.log('Shortcuts Path:', shortcutsPath);
+  try {
+    const shortcutsPath = getVdfShortcutsFullPath();
+    console.log('Shortcuts Path:', shortcutsPath);
 
-  const inBuffer = await fs.readFile(shortcutsPath);
-  const shortcutsData = readVdf(inBuffer);
-  //   console.log(shortcutsData);
+    const inBuffer = await fs.readFile(shortcutsPath);
+    const shortcutsData = readVdf(inBuffer);
+    //   console.log(shortcutsData);
 
-  const shortcutsMap = shortcutsData['shortcuts'];
-  const gamesMap = {};
+    const shortcutsMap = shortcutsData['shortcuts'];
+    const gamesMap = {};
 
-  for (const key in shortcutsMap) {
-    const shortcut = shortcutsMap[key];
-    const steamAppId = shortcut['appid'];
+    for (const key in shortcutsMap) {
+      const shortcut = shortcutsMap[key];
+      const steamAppId = shortcut['appid'];
 
-    gamesMap[steamAppId] = {
-      steamAppId: steamAppId,
-      steamTitle: shortcut['AppName'] ?? shortcut['appname'],
-      steamExeTarget: shortcut['Exe'] ?? shortcut['exe'],
-      steamStartDir: shortcut['StartDir'] ?? shortcut['startdir'],
-      steamLaunchArgs: shortcut['LaunchOptions'] ?? shortcut['launchoptions'],
-      icon: loadIconFromPath(shortcut['Icon'] ?? shortcut['icon']),
+      gamesMap[steamAppId] = makeGameItemFromSteamItem(shortcut);
+    }
 
-      // all these fields are not in the shortcuts.vdf file and unknown
-      // they will be populated later when saving the game
-      // for example the start dir could look like this:
-      // /home/deck/.var/app/ru.linux_gaming.PortProton/steam_scripts
-      clientLocation: null,
-      nasLocation: null,
-      prefixLocation: null,
-      launcher: 'NOOP',
-      status: 'DRAFT',
-      hash: null,
-      sizeInBytes: 0,
-      realLocalGamePath: null,
-      realLocalPrefixPath: null,
-      localHash: null,
-      localSizeInBytes: 0,
-      remoteHash: null,
-      remoteSizeInBytes: 0,
-      prefixHash: null,
-      prefixSizeInBytes: 0,
-      localPrefixHash: null,
-      localPrefixSizeInBytes: 0,
-      remotePrefixHash: null,
-      remotePrefixSizeInBytes: 0,
-      source: 'steam',
-      errors: [],
-    };
+    return gamesMap;
+  } catch (error) {
+    console.error('steam_getAllGamesMap: Error fetching games:', error);
+    throw error;
   }
-
-  return gamesMap;
-}
-
-function loadIconFromPath(iconPath) {
-  // Load the icon from the given path
-  // the icon will be stored in the database as a blob
-
-  // check if the icon path is a valid file
-  if (!fs.existsSync(iconPath)) {
-    console.error(`Icon path does not exist: ${iconPath}`);
-    return null;
-  }
-
-  const iconBuffer = fs.readFileSync(iconPath);
-  return iconBuffer.toString('base64');
 }
 
 function getVdfShortcutsFullPath() {

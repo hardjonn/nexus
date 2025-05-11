@@ -1,58 +1,29 @@
 import { db } from './db';
+import { makeGameItemFromDbItem } from './game.item';
 
 const Game = db.games;
 
 async function db_getAllGamesMap() {
   try {
+    console.log('game.queries::db_getAllGamesMap');
     const games = await Game.findAll();
     // convert games to a map
     const gamesMap = {};
     for (const game of games) {
       const steamAppId = game['steam_app_id'];
-      gamesMap[steamAppId] = makeGameItem(game);
+      gamesMap[steamAppId] = makeGameItemFromDbItem(game);
     }
 
     return gamesMap;
   } catch (error) {
-    console.error('Error fetching games:', error);
+    console.error('game.queries::db_getAllGamesMap: Error fetching games:', error);
     throw error;
   }
 }
 
-function makeGameItem(game) {
-  return {
-    steamAppId: game['steam_app_id'],
-    steamTitle: game['steam_title'],
-    steamExeTarget: game['steam_exe_target'],
-    steamStartDir: game['steam_start_dir'],
-    steamLaunchArgs: game['steam_launch_args'],
-    icon: game['icon'] ? Buffer.from(game['icon']).toString('base64') : null,
-    clientLocation: game['client_location'],
-    nasLocation: game['nas_location'],
-    prefixLocation: game['prefix_location'],
-    launcher: game['launcher'],
-    hash: game['hash_md5'],
-    sizeInBytes: game['size_in_bytes'],
-    prefixHash: game['prefix_hash_md5'],
-    prefixSizeInBytes: game['prefix_size_in_bytes'],
-    status: game['status'],
-    realLocalGamePath: null,
-    realLocalPrefixPath: null,
-    localHash: null,
-    localSizeInBytes: 0,
-    remoteHash: null,
-    remoteSizeInBytes: 0,
-    localPrefixHash: null,
-    localPrefixSizeInBytes: 0,
-    remotePrefixHash: null,
-    remotePrefixSizeInBytes: 0,
-    source: 'db',
-    errors: [],
-  };
-}
-
 async function db_uploadIcon(steamAppId, resizedImage) {
   try {
+    console.log('game.queries::db_uploadIcon', steamAppId);
     const game = await Game.findOne({
       where: {
         steam_app_id: steamAppId,
@@ -77,6 +48,7 @@ async function db_uploadIcon(steamAppId, resizedImage) {
 
 async function db_updateGameItem(steamAppId, gameItem) {
   try {
+    console.log('game.queries::db_updateGameItem', steamAppId);
     const game = await Game.findOne({
       where: {
         steam_app_id: steamAppId,

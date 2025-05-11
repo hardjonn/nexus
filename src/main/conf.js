@@ -14,15 +14,16 @@ const defaultConfig = {
     user_config_path: '',
     shortcuts_filename: 'shortcuts.vdf',
   },
-  nas: {
+  remote_lib: {
     host: 'nexus.host',
     user: 'nexus',
     private_key_path: '/home/deck/.ssh/spb_truenas_nexus',
-    games_lib_path: 'Nexus/Games',
+    games_path: 'Nexus/Games',
     prefixes_path: 'Nexus/Prefixes',
+    initial_prefixes: 'initial',
   },
-  client: {
-    games_lib_path: 'Games',
+  local_lib: {
+    games_path: 'Games',
     prefixes_path: '',
   },
   app: {
@@ -85,7 +86,7 @@ const schema = {
         },
       },
     },
-    nas: {
+    remote_lib: {
       type: 'object',
       properties: {
         host: {
@@ -100,7 +101,7 @@ const schema = {
           type: 'string',
           default: '/home/deck/.ssh/spb_truenas_nexus',
         },
-        games_lib_path: {
+        games_path: {
           type: 'string',
           default: 'Nexus/Games',
         },
@@ -108,12 +109,16 @@ const schema = {
           type: 'string',
           default: 'Nexus/Prefixes',
         },
+        initial_prefixes: {
+          type: 'string',
+          default: 'initial',
+        },
       },
     },
-    client: {
+    local_lib: {
       type: 'object',
       properties: {
-        games_lib_path: {
+        games_path: {
           type: 'string',
           default: 'Games',
         },
@@ -159,33 +164,38 @@ const schema = {
 const conf = new Conf({ schema: schema, defaults: defaultConfig });
 
 function saveConfig(configData) {
+  console.log('conf::saveConfig', configData);
   conf.set('db', configData.db);
   conf.set('steam', configData.steam);
-  conf.set('nas', configData.nas);
-  conf.set('client', configData.client);
+  conf.set('remote_lib', configData.remote_lib);
+  conf.set('local_lib', configData.local_lib);
 
   return true;
 }
 
 function getConfig() {
+  console.log('conf::getConfig');
   return {
     db: conf.get('db'),
     steam: conf.get('steam'),
-    nas: conf.get('nas'),
-    client: conf.get('client'),
+    remote_lib: conf.get('remote_lib'),
+    local_lib: conf.get('local_lib'),
     app: conf.get('app'),
   };
 }
 
 function getConfigApp_WindowBounds() {
+  console.log('conf::getConfigApp_WindowBounds');
   return conf.get('app.window_bounds');
 }
 
 function saveConfigApp_WindowBounds(bounds) {
+  console.log('conf::saveConfigApp_WindowBounds', bounds);
   conf.set('app.window_bounds', bounds);
 }
 
 function saveConfigApp_ActiveTab(tabName) {
+  console.log('conf::saveConfigApp_ActiveTab', tabName);
   conf.set('app.active_tab', tabName);
 }
 

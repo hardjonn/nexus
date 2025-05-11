@@ -18,16 +18,16 @@ const store = reactive({
     shortcuts_filename: 'shortcuts.vdf',
   },
 
-  // nas/remote config
-  nas: {
+  // remote config
+  remote_lib: {
     host: '',
-    games_lib_path: 'Nexus/Games',
+    games_path: 'Nexus/Games',
     prefixes_path: 'Nexus/Prefixes',
   },
 
-  // client config
-  client: {
-    games_lib_path: 'Games',
+  // local config
+  local_lib: {
+    games_path: 'Games',
     prefixes_path: '',
   },
 
@@ -48,8 +48,8 @@ window.confAPI.getConfig().then((config) => {
   console.log('Received Config from the main process:', config);
   store.db = config.db;
   store.steam = config.steam;
-  store.nas = config.nas;
-  store.client = config.client;
+  store.remote_lib = config.remote_lib;
+  store.local_lib = config.local_lib;
   store.app = config.app;
 });
 
