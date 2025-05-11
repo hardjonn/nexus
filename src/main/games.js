@@ -27,34 +27,36 @@ import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
 // if the hash is NULL and the size is 0 then the game is not installed/present
 
 async function getGames() {
-  const gamesMap = {};
+  try {
+    // step 1: get all the records from the database
+    console.log('games::getGames fetching DB games');
+    const gamesFromDbMap = await db_getAllGamesMap();
 
-  // step 1: get all the records from the database
-  const gamesFromDbMap = await db_getAllGamesMap();
+    // step 2: get all the records from steam
+    console.log('games::getGames fetching Steam games');
+    const gamesFromSteamMap = await steam_getAllGamesMap();
 
-  // step 2: get all the records from steam
-  const gamesFromSteamMap = await steam_getAllGamesMap();
+    // step 3: merge the two maps
+    // conflict resolution:
+    // 1. if the game is in the DB and not in steam, keep it
+    // 2. if the game is in steam and not in the DB, keep it
+    // 3. if the game is in both, keep the one from the DB
+    console.log('games::getGames merging DB and Steam games');
+    const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
 
-  // step 3: merge the two maps
-  // conflict resolution:
-  // 1. if the game is in the DB and not in steam, keep it
-  // 2. if the game is in steam and not in the DB, keep it
-  // 3. if the game is in both, keep the one from the DB
-  const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
-  // console.log('Merged Games Map:', mergedGamesMap);
-
-  // step 4: go over the merged games map
-  // calculate the hash and size for both local and remote
-  // locally the game could be located at different places
-  // depending where it was installed to
-  for (const key in mergedGamesMap) {
-    const game = await augmentGameWithRealLocalGamePath(mergedGamesMap[key]);
-    gamesMap[game.steamAppId] = game;
+    return {
+      status: 'success',
+      games: Object.values(mergedGamesMap).slice(0, 5),
+    };
+  } catch (error) {
+    console.error('games::getGames: Error fetching games:', error);
+    return {
+      status: 'error',
+      error: {
+        message: error.message,
+      },
+    };
   }
-
-  //  console.log('Games Map:', gamesMap);
-
-  return Object.values(gamesMap).slice(0, 5);
 }
 
 async function augmentGameWithRealLocalGamePath(game) {
