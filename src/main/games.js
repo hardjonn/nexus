@@ -13,6 +13,7 @@ import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemF
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
+import { setGamesMapState } from './app.state';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -43,6 +44,8 @@ async function getGames() {
     // 3. if the game is in both, keep the one from the DB
     console.log('games::getGames merging DB and Steam games');
     const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
+
+    setGamesMapState(mergedGamesMap);
 
     return {
       status: 'success',

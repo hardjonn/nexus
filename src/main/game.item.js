@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 
 import { getConfig } from './conf';
+import { loadIconFromPath, makeIconFromDbIcon } from './game.icon';
 
 async function makeGameItemFromDbItem(game) {
   return {
@@ -10,7 +11,7 @@ async function makeGameItemFromDbItem(game) {
     steamExeTarget: game['steam_exe_target'],
     steamStartDir: game['steam_start_dir'],
     steamLaunchArgs: game['steam_launch_args'],
-    icon: game['icon'] ? Buffer.from(game['icon']).toString('base64') : null,
+    icon: makeIconFromDbIcon(game['icon']),
     gameLocation: game['game_location'],
     prefixLocation: game['prefix_location'],
     launcher: game['launcher'],
@@ -72,20 +73,6 @@ async function makeGameItemFromSteamItem(shortcut) {
     remotePrefixHash: null,
     remotePrefixSizeInBytes: 0,
   };
-}
-
-function loadIconFromPath(iconPath) {
-  // Load the icon from the given path
-  // the icon will be stored in the database as a blob
-
-  // check if the icon path is a valid file
-  if (!fs.existsSync(iconPath)) {
-    console.error(`Icon path does not exist: ${iconPath}`);
-    return null;
-  }
-
-  const iconBuffer = fs.readFileSync(iconPath);
-  return iconBuffer.toString('base64');
 }
 
 function getRealLocalGamePath(gameLocation) {

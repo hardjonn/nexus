@@ -19,13 +19,17 @@ async function loadGamesList() {
     loading.value = true;
     error.value = null;
 
-    const gamesResponse = await getGames();
-    gamesList.value = gamesResponse;
+    console.log('GamesList::loadGamesList fetching games');
+    const response = await getGames();
 
-    console.log('Received games lib from the main process:', gamesResponse);
-  } catch (err) {
-    error.value = 'Failed to load games: ' + err.message;
-    console.log(error.value, err);
+    if (response.status !== 'success') {
+      error.value = response.error.message;
+      return;
+    }
+
+    gamesList.value = response.games;
+  } catch (error) {
+    error.value = 'Failed to load games: ' + error.message;
   } finally {
     loading.value = false;
   }
