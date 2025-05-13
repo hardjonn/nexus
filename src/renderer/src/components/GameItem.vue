@@ -14,10 +14,13 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(['update-game-item']);
+
 const data = reactive({
+  isProcessingAction: false,
+
   iconPreview: null,
   iconFilePath: null,
-  iconUploading: false,
 
   isEditing: false,
   isSaving: false,
@@ -164,7 +167,15 @@ const shouldShowUploadToRemoteButton = computed(() => {
   return true;
 });
 
-console.log('GameItem props:', data.gameItem);
+function preActionWithProgressMessage(progressMessage) {
+  data.isProcessingAction = true;
+
+  data.errorMessage = null;
+  data.successMessage = null;
+  data.errors = null;
+
+  data.progressMessage = progressMessage;
+}
 
 function iconChanged(e) {
   const file = e.target.files[0];
@@ -183,14 +194,10 @@ async function onUploadIcon() {
     return;
   }
 
-  data.iconUploading = true;
-  data.errorMessage = null;
-  data.successMessage = null;
-  data.errors = null;
-  data.progressMessage = 'Uploading icon...';
+  preActionWithProgressMessage('Uploading icon...');
 
   try {
-    const response = await uploadIcon(props.gameItem.steamAppId, data.iconFilePath);
+    const response = await uploadIcon(data.gameItem.steamAppId, data.iconFilePath);
 
     if (!response) {
       console.error('No response from uploadIcon');
@@ -198,26 +205,31 @@ async function onUploadIcon() {
       return;
     }
 
-    if (!response.success) {
+    if (response.status !== 'success') {
       console.error('Icon upload failed:', response);
-      data.errorMessage = response.message || 'Something went wrong while uploading the icon.';
+      data.errorMessage = response.error.message || 'Something went wrong while uploading the icon.';
       return;
     }
 
-    data.gameItem.icon = response.icon; // Assuming the response contains the new icon data
     data.iconPreview = null;
     data.iconFilePath = null;
     data.successMessage = 'Icon uploaded successfully!';
+
+    emit('update-game-item', response.gameItem);
 
     console.log('Icon upload status:', response);
   } catch (error) {
     console.error('Error uploading icon:', error);
     data.errorMessage = 'An error occurred while uploading the icon: ' + error.message;
   } finally {
-    data.iconUploading = false;
+    data.isProcessingAction = false;
     data.progressMessage = null;
   }
 }
+
+const isIconUploading = computed(() => {
+  return data.isProcessingAction && data.iconPreview;
+});
 
 function onActionEdit() {
   data.isEditing = true;
@@ -391,13 +403,13 @@ async function onActionRefreshHashAndSize() {
 
           <button
             v-if="data.iconPreview"
-            :disabled="data.progressMessage"
-            :class="data.progressMessage ? 'disabled cursor-not-allowed' : ''"
+            :disabled="isIconUploading"
+            :class="isIconUploading ? 'disabled cursor-not-allowed' : ''"
             type="button"
             class="absolute m-auto left-0 right-0 bottom-0 block w-24 block text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
             @click="onUploadIcon"
           >
-            Upload
+            {{ isIconUploading ? 'Uploading...' : 'Upload' }}
           </button>
         </label>
       </div>

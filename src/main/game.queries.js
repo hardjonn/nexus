@@ -37,9 +37,9 @@ async function db_uploadIcon(steamAppId, resizedImage) {
     await game.update({
       icon: resizedImage,
     });
-    console.log(`Icon for game ${steamAppId} updated successfully`);
+    console.log(`game.queries::db_uploadIcon: Icon for game ${steamAppId} updated successfully`);
   } catch (error) {
-    console.error('Error uploading icon:', error);
+    console.error('game.queries::db_uploadIcon: Error uploading icon:', error);
     return false;
   }
 

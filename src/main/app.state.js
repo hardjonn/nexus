@@ -15,4 +15,13 @@ function setGamesMapState(gamesMap) {
   appState.gamesMap = gamesMap;
 }
 
-export { getAppState, setGamesMapState };
+function updateGameItemState(steamAppId, fieldsToUpdate) {
+  appState.gamesMap[steamAppId] = {
+    ...appState.gamesMap[steamAppId],
+    ...fieldsToUpdate,
+  };
+
+  return appState.gamesMap[steamAppId];
+}
+
+export { getAppState, setGamesMapState, updateGameItemState };

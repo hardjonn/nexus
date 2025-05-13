@@ -13,7 +13,8 @@ import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemF
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
-import { setGamesMapState } from './app.state';
+import { setGamesMapState, updateGameItemState } from './app.state';
+import { makeIconFromPath } from './game.icon';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -393,31 +394,36 @@ function makeDirectorySizeCommand(dirPath) {
 
 async function uploadIcon(steamAppId, filePath) {
   try {
-    const image = await Jimp.read(filePath);
-    // we need to convert image to a 256x256 JPG
-    const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
-    console.log('Resized image buffer:', resizedImage.length);
+    const resizedImage = await makeIconFromPath(filePath);
 
     const uploadResult = await db_uploadIcon(steamAppId, resizedImage);
 
     if (!uploadResult) {
-      console.log('Failed to upload icon to the database');
+      console.log('games::uploadIcon: Failed to upload icon to the database');
+
       return {
-        success: false,
-        message: 'Failed to upload icon to the database',
+        status: 'error',
+        error: {
+          message: 'Failed to upload icon to the database',
+        },
       };
     }
 
+    const updatedGameItem = updateGameItemState(steamAppId, {
+      icon: resizedImage.toString('base64'),
+    });
+
     return {
-      success: true,
-      message: 'Icon uploaded successfully',
-      icon: resizedImage.toString('base64'), // Convert the buffer to a base64 string
+      status: 'success',
+      gameItem: updatedGameItem,
     };
   } catch (error) {
-    console.error('Error uploading icon:', error);
+    console.error('games::uploadIcon: Error uploading icon:', error);
     return {
-      success: false,
-      message: 'Failed to upload icon: ' + error.message,
+      status: 'error',
+      error: {
+        message: 'Failed to upload icon to the database: ' + error.message,
+      },
     };
   }
 }

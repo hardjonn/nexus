@@ -60,6 +60,10 @@ const filteredAndSortedGames = computed(() => {
     })
     .sort(compare);
 });
+
+const handleUpdateGameItem = (updatedGameItem) => {
+  gamesMap.value[updatedGameItem.steamAppId] = updatedGameItem;
+};
 </script>
 
 <template>
@@ -242,7 +246,7 @@ const filteredAndSortedGames = computed(() => {
 
   <div v-if="filteredAndSortedGames.length > 0" class="game-list">
     <div v-for="game in filteredAndSortedGames" :key="game.steamAppId" class="game-item">
-      <GameItem :game-item="game" :progress="progress[`steamAppId-${game.steamAppId}`]" />
+      <GameItem :game-item="game" :progress="progress[`steamAppId-${game.steamAppId}`]" @update-game-item="handleUpdateGameItem" />
     </div>
   </div>
 </template>
