@@ -4,7 +4,7 @@ import path from 'node:path';
 import { getConfig } from './conf';
 import { loadIconFromPath, makeIconFromDbIcon } from './game.icon';
 
-async function makeGameItemFromDbItem(game) {
+function makeGameItemFromDbItem(game) {
   return {
     steamAppId: game['steam_app_id'],
     steamTitle: game['steam_title'],
@@ -37,7 +37,7 @@ async function makeGameItemFromDbItem(game) {
   };
 }
 
-async function makeGameItemFromSteamItem(shortcut) {
+function makeGameItemFromSteamItem(shortcut) {
   return {
     steamAppId: shortcut['AppId'] ?? shortcut['appid'],
     steamTitle: shortcut['AppName'] ?? shortcut['appname'],

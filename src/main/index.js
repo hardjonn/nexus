@@ -133,7 +133,7 @@ ipcMain.on('config/save/app/active_tab', (event, tabName) => {
 });
 
 ipcMain.handle('games/get', async () => {
-  return getGames();
+  return await getGames();
 });
 
 ipcMain.handle('games/icon/upload', async (event, steamAppId, filePath) => {

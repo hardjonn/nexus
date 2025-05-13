@@ -30,11 +30,11 @@ import { setGamesMapState } from './app.state';
 async function getGames() {
   try {
     // step 1: get all the records from the database
-    console.log('games::getGames fetching DB games');
+    console.log('games::getGames: fetching DB games');
     const gamesFromDbMap = await db_getAllGamesMap();
 
     // step 2: get all the records from steam
-    console.log('games::getGames fetching Steam games');
+    console.log('games::getGames: fetching Steam games');
     const gamesFromSteamMap = await steam_getAllGamesMap();
 
     // step 3: merge the two maps
@@ -42,14 +42,16 @@ async function getGames() {
     // 1. if the game is in the DB and not in steam, keep it
     // 2. if the game is in steam and not in the DB, keep it
     // 3. if the game is in both, keep the one from the DB
-    console.log('games::getGames merging DB and Steam games');
+    console.log('games::getGames: merging DB and Steam games');
     const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
 
+    console.log('games::getGames: setting games map state');
     setGamesMapState(mergedGamesMap);
 
+    console.log('games::getGames: returning games');
     return {
       status: 'success',
-      games: Object.values(mergedGamesMap).slice(0, 5),
+      games: mergedGamesMap, //Object.values(mergedGamesMap).slice(0, 5),
     };
   } catch (error) {
     console.error('games::getGames: Error fetching games:', error);

@@ -6,7 +6,7 @@ import GameItem from './GameItem.vue';
 
 const loading = ref(false);
 const error = ref(null);
-const gamesList = ref([]);
+const gamesMap = ref({});
 const search = ref('');
 const source = ref(null);
 const status = ref(['DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED']);
@@ -27,7 +27,7 @@ async function loadGamesList() {
       return;
     }
 
-    gamesList.value = response.games;
+    gamesMap.value = response.games;
   } catch (error) {
     error.value = 'Failed to load games: ' + error.message;
   } finally {
@@ -44,7 +44,7 @@ const filteredAndSortedGames = computed(() => {
 
   console.log('status.value', status.value);
 
-  return gamesList.value
+  return Object.values(gamesMap.value)
     .filter((game) => {
       return game.steamTitle.toLowerCase().includes(search.value.toLowerCase()) || game.steamAppId.toString().includes(search.value.toLowerCase());
     })
