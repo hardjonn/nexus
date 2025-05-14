@@ -88,20 +88,24 @@ function getRealLocalGamePath(gameLocation) {
     return null;
   }
 
-  // get the list of all available/configured game libs locations
-  // they are being stored in the following format
-  // /path/to/game/lib;/another/path/to/game/lib;/and/so/on
-  const gamesLibPathList = config.local_lib.games_path.split(';');
+  try {
+    // get the list of all available/configured game libs locations
+    // they are being stored in the following format
+    // /path/to/game/lib;/another/path/to/game/lib;/and/so/on
+    const gamesLibPathList = config.local_lib.games_path.split(';');
 
-  for (const gamesLibPath of gamesLibPathList) {
-    const localGamePath = path.join(gamesLibPath, gameLocation);
-    console.log('game.item::getRealLocalGamePath: Local Game Path:', localGamePath);
+    for (const gamesLibPath of gamesLibPathList) {
+      const localGamePath = path.join(gamesLibPath, gameLocation);
+      console.log('game.item::getRealLocalGamePath: Local Game Path:', localGamePath);
 
-    if (fs.existsSync(localGamePath)) {
-      return localGamePath;
+      if (fs.existsSync(localGamePath)) {
+        return localGamePath;
+      }
+
+      console.log('game.item::getRealLocalGamePath: Game not found at the following location: ' + localGamePath);
     }
-
-    console.log('game.item::getRealLocalGamePath: Game not found at the following location: ' + localGamePath);
+  } catch (error) {
+    console.error('game.item::getRealLocalGamePath: Error getting local game path:', error);
   }
 
   return null;
@@ -121,7 +125,7 @@ function getRealLocalPrefixPath(prefixLocation) {
   }
 
   try {
-    const localPrefixPath = path.join(config.client.prefixes_path, prefixLocation);
+    const localPrefixPath = path.join(config.local_lib.prefixes_path, prefixLocation);
 
     if (!fs.existsSync(localPrefixPath)) {
       console.log('game.item::getRealLocalPrefixPath: Prefix not found at the following location: ' + localPrefixPath);

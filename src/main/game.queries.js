@@ -64,21 +64,18 @@ async function db_updateGameItem(steamAppId, gameItem) {
       steam_exe_target: gameItem.steamExeTarget,
       steam_start_dir: gameItem.steamStartDir,
       steam_launch_args: gameItem.steamLaunchArgs,
-      client_location: gameItem.clientLocation,
-      nas_location: gameItem.nasLocation,
+      game_location: gameItem.gameLocation,
       prefix_location: gameItem.prefixLocation,
       launcher: gameItem.launcher,
       status: gameItem.status,
-      hash_md5: gameItem.hash,
-      size_in_bytes: gameItem.sizeInBytes,
+      game_hash_md5: gameItem.gameHash,
+      game_size_in_bytes: gameItem.gameSizeInBytes,
       prefix_hash_md5: gameItem.prefixHash,
       prefix_size_in_bytes: gameItem.prefixSizeInBytes,
     });
     console.log(`Game item ${steamAppId} updated successfully`);
 
-    console.log('GAME ITEM>>>>>>>>>>>>', makeGameItem(game));
-
-    return makeGameItem(game);
+    return makeGameItemFromDbItem(game);
   } catch (error) {
     console.error('Error saving game item:', error);
     return null;
@@ -93,23 +90,20 @@ async function db_createGameItemFromSteamData(steamAppId, gameItem) {
       steam_exe_target: gameItem.steamExeTarget,
       steam_start_dir: gameItem.steamStartDir,
       steam_launch_args: gameItem.steamLaunchArgs,
-      client_location: gameItem.clientLocation,
-      nas_location: gameItem.nasLocation,
+      game_location: gameItem.gameLocation,
       prefix_location: gameItem.prefixLocation,
       icon: gameItem.icon,
       launcher: gameItem.launcher,
       status: gameItem.status,
-      hash_md5: gameItem.hash,
-      size_in_bytes: gameItem.sizeInBytes,
+      game_hash_md5: gameItem.gameHash,
+      game_size_in_bytes: gameItem.gameSizeInBytes,
       prefix_hash_md5: gameItem.prefixHash,
       prefix_size_in_bytes: gameItem.prefixSizeInBytes,
     });
 
     console.log(`Game item ${steamAppId} created successfully`);
 
-    console.log('GAME ITEM>>>>>>>>>>>>', makeGameItem(game));
-
-    return makeGameItem(game);
+    return makeGameItemFromDbItem(game);
   } catch (error) {
     console.error('Error creating game item:', error);
     return null;

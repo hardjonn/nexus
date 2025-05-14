@@ -3,6 +3,15 @@ import { computed, reactive, toRaw, watch } from 'vue';
 const { webUtils } = require('electron');
 import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize } from '../games.js';
 
+const processingActions = {
+  uploadingIcon: 'Uploading icon...',
+  editingGameItem: 'Editing game item... Make changes and save',
+  savingGameItem: 'Saving game item...',
+  uploadingGameToRemote: 'Uploading game to remote...',
+  abortingGameUpload: 'Aborting game upload...',
+  refreshingHashAndSize: 'Refreshing hash and size...',
+};
+
 const props = defineProps({
   gameItem: {
     type: Object,
@@ -17,7 +26,7 @@ const props = defineProps({
 const emit = defineEmits(['update-game-item']);
 
 const data = reactive({
-  isProcessingAction: false,
+  processingAction: null,
 
   iconPreview: null,
   iconFilePath: null,
@@ -160,21 +169,51 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
-  if (data.isEditing || data.isSaving || data.isUploading) {
+  if (isProcessingAction(processingActions.editingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.savingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
     return false;
   }
 
   return true;
 });
 
-function preActionWithProgressMessage(progressMessage) {
-  data.isProcessingAction = true;
+const shouldShowRefreshHashAndSizeButton = computed(() => {
+  if (data.gameItem.source === 'steam') {
+    return false;
+  }
+
+  if (data.gameItem.status !== 'DRAFT' && data.gameItem.status !== 'UPLOADING' && data.gameItem.status !== 'ACTIVE') {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.editingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.savingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
+    return false;
+  }
+
+  return true;
+});
+
+function activateProcessingAction(action) {
+  data.processingAction = action;
 
   data.errorMessage = null;
   data.successMessage = null;
   data.errors = null;
-
-  data.progressMessage = progressMessage;
 }
 
 function iconChanged(e) {
@@ -194,7 +233,7 @@ async function onUploadIcon() {
     return;
   }
 
-  preActionWithProgressMessage('Uploading icon...');
+  activateProcessingAction(processingActions.uploadingIcon);
 
   try {
     const response = await uploadIcon(data.gameItem.steamAppId, data.iconFilePath);
@@ -222,44 +261,33 @@ async function onUploadIcon() {
     console.error('Error uploading icon:', error);
     data.errorMessage = 'An error occurred while uploading the icon: ' + error.message;
   } finally {
-    data.isProcessingAction = false;
-    data.progressMessage = null;
+    data.processingAction = null;
   }
 }
 
-const isIconUploading = computed(() => {
-  return data.isProcessingAction && data.iconPreview;
-});
+function isProcessingAction(action) {
+  return data.processingAction === action;
+}
 
 function onActionEdit() {
-  data.isEditing = true;
-  data.errorMessage = null;
-  data.errors = null;
-  data.successMessage = null;
-  data.progressMessage = null;
+  activateProcessingAction(processingActions.editingGameItem);
 }
 
 function onActionEditCancel() {
-  data.isEditing = false;
+  data.processingAction = null;
 
   data.gameItem = { ...props.gameItem };
 }
 
 async function onActionSave() {
-  data.isEditing = false;
-  data.isSaving = true;
-  data.errorMessage = null;
-  data.errors = null;
-  data.successMessage = null;
-  data.progressMessage = 'Saving to DB...';
+  activateProcessingAction(processingActions.savingGameItem);
 
   try {
     const rawGameItem = toRaw(data.gameItem);
-    delete rawGameItem.errors;
-    console.log('Raw Game Item: ', rawGameItem);
+    console.log('onActionSave: Raw Game Item: ', rawGameItem);
 
-    const response = await saveGameItem(props.gameItem.steamAppId, rawGameItem);
-    console.log(response);
+    const response = await saveGameItem(data.gameItem.steamAppId, rawGameItem);
+    console.log('onActionSave: Response: ', response);
 
     if (!response) {
       console.error('No response from saveGameItem');
@@ -267,22 +295,21 @@ async function onActionSave() {
       return;
     }
 
-    if (!response.success) {
+    if (response.status !== 'success') {
       console.error('Saving game item failed:', response);
-      data.errorMessage = response.message || 'Something went wrong while saving the game item.';
-      data.errors = response.errors;
+      data.errorMessage = response.error.message || 'Something went wrong while saving the game item.';
+      data.errors = response.error.errors;
       return;
     }
 
-    data.gameItem = { ...response.gameItem };
-
     data.successMessage = 'Game item saved successfully!';
+
+    emit('update-game-item', response.gameItem);
   } catch (error) {
     console.error('Error saving the game item:', error);
-    data.errorMessage = 'An error occurred while saving the game items:' + error.message;
+    data.errorMessage = 'An error occurred while saving the game item:' + error.message;
   } finally {
-    data.isSaving = false;
-    data.progressMessage = null;
+    data.processingAction = null;
   }
 }
 
@@ -336,40 +363,33 @@ async function onActionCancelUploadGameToRemote() {
 }
 
 async function onActionRefreshHashAndSize() {
-  data.isRefreshingHashAndSize = true;
-  data.errorMessage = null;
-  data.progressMessage = 'Refreshing hash and size...';
-  data.successMessage = null;
-  data.errors = null;
+  activateProcessingAction(processingActions.refreshingHashAndSize);
 
   const rawGameItem = toRaw(data.gameItem);
-  delete rawGameItem.errors;
 
   try {
-    const response = await refreshHashAndSize(props.gameItem.steamAppId, rawGameItem);
+    const response = await refreshHashAndSize(data.gameItem.steamAppId, rawGameItem);
 
     console.log('Refresh Hash and Size Response:', response);
-
-    data.isRefreshingHashAndSize = false;
 
     if (!response) {
       data.errorMessage = 'Something went wrong while refreshing the hash and size.';
       return;
     }
 
-    if (!response.success) {
-      data.errorMessage = response.message || 'Something went wrong while refreshing the hash and size.';
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while refreshing the hash and size.';
       return;
     }
 
-    data.gameItem = { ...response.gameItem };
     data.successMessage = 'Hash and size refreshed successfully!';
+
+    emit('update-game-item', response.gameItem);
   } catch (error) {
     console.error('Error refreshing hash and size:', error);
     data.errorMessage = 'An error occurred while refreshing the hash and size: ' + error.message;
   } finally {
-    data.progressMessage = null;
-    data.isRefreshingHashAndSize = false;
+    data.processingAction = null;
   }
 }
 
@@ -403,20 +423,20 @@ async function onActionRefreshHashAndSize() {
 
           <button
             v-if="data.iconPreview"
-            :disabled="isIconUploading"
-            :class="isIconUploading ? 'disabled cursor-not-allowed' : ''"
+            :disabled="isProcessingAction(processingActions.uploadingIcon)"
+            :class="isProcessingAction(processingActions.uploadingIcon) ? 'disabled cursor-not-allowed' : ''"
             type="button"
             class="absolute m-auto left-0 right-0 bottom-0 block w-24 block text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
             @click="onUploadIcon"
           >
-            {{ isIconUploading ? 'Uploading...' : 'Upload' }}
+            {{ isProcessingAction(processingActions.uploadingIcon) ? 'Uploading...' : 'Upload' }}
           </button>
         </label>
       </div>
 
       <div class="mt-4">
         <button
-          v-if="!data.isEditing && !data.isSaving"
+          v-if="!isProcessingAction(processingActions.editingGameItem) && !data.processingAction"
           type="button"
           class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
           @click="onActionEdit"
@@ -425,13 +445,13 @@ async function onActionRefreshHashAndSize() {
         </button>
 
         <button
-          v-if="data.gameItem.source === 'db'"
+          v-if="shouldShowRefreshHashAndSizeButton"
           type="button"
           class="text-white w-full bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600 hover:bg-gradient-to-br dark:focus:ring-teal-800 shadow-lg dark:shadow-lg dark:shadow-teal-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
-          :disabled="data.isRefreshingHashAndSize"
+          :disabled="isProcessingAction(processingActions.refreshingHashAndSize)"
           @click="onActionRefreshHashAndSize"
         >
-          {{ data.isRefreshingHashAndSize ? 'Refreshing...' : 'Refresh Hash and Size' }}
+          {{ isProcessingAction(processingActions.refreshingHashAndSize) ? 'Refreshing...' : 'Refresh Hash and Size' }}
         </button>
 
         <button
@@ -444,7 +464,7 @@ async function onActionRefreshHashAndSize() {
         </button>
 
         <button
-          v-if="data.isUploading"
+          v-if="isProcessingAction(processingActions.uploadingGameToRemote)"
           type="button"
           class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
           @click="onActionCancelUploadGameToRemote"
@@ -452,7 +472,7 @@ async function onActionRefreshHashAndSize() {
           Cancel Game Upload
         </button>
 
-        <div v-if="data.isUploading && data.progress">
+        <div v-if="isProcessingAction(processingActions.uploadingGameToRemote) && data.progress">
           <div class="mt-2 mb-2 text-base font-medium text-center text-green-700 dark:text-green-500">{{ data.progress.transferred }} | {{ data.progress.speed }}</div>
           <div class="w-full h-4 mb-4 bg-gray-200 rounded-full dark:bg-gray-700">
             <div class="h-4 dark:bg-green-500 text-xs font-medium text-center p-0.5 leading-none rounded-full" :style="{ width: data.progress.percentage }">
@@ -471,7 +491,7 @@ async function onActionRefreshHashAndSize() {
         </button>
 
         <button
-          v-if="data.isSaving"
+          v-if="isProcessingAction(processingActions.savingGameItem)"
           disabled
           type="button"
           class="text-white w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
@@ -490,7 +510,7 @@ async function onActionRefreshHashAndSize() {
         </button>
 
         <button
-          v-if="data.isEditing"
+          v-if="isProcessingAction(processingActions.editingGameItem)"
           type="button"
           class="text-white w-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:bg-gradient-to-br dark:focus:ring-green-800 shadow-lg shadow-green-500/50 dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
           @click="onActionSave"
@@ -499,7 +519,7 @@ async function onActionRefreshHashAndSize() {
         </button>
 
         <button
-          v-if="data.isEditing"
+          v-if="isProcessingAction(processingActions.editingGameItem)"
           type="button"
           class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
           @click="onActionEditCancel"
@@ -704,17 +724,9 @@ async function onActionRefreshHashAndSize() {
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Prefix Path:</span>
         <span class="font-normal py-2.5 text-gray-400">{{ data.gameItem.realLocalPrefixPath }}</span>
 
-        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Remote Location:</span>
+        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Game Location:</span>
         <input
-          v-model="data.gameItem.remoteLocation"
-          type="text"
-          class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
-        />
-
-        <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Local Location:</span>
-        <input
-          v-model="data.gameItem.localLocation"
+          v-model="data.gameItem.gameLocation"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
           :disabled="!data.isEditing"
@@ -755,7 +767,7 @@ async function onActionRefreshHashAndSize() {
   </div>
 
   <div
-    v-if="data.progressMessage"
+    v-if="data.processingAction"
     id="alert-border-1"
     class="flex items-center p-4 mb-4 text-blue-800 border-t-4 border-blue-300 bg-blue-50 dark:text-blue-400 dark:bg-gray-800 dark:border-blue-800"
     role="alert"
@@ -766,7 +778,7 @@ async function onActionRefreshHashAndSize() {
       />
     </svg>
     <div class="ms-3 text-sm font-medium">
-      {{ data.progressMessage }}
+      {{ data.processingAction }}
     </div>
     <button
       type="button"

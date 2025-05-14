@@ -14,7 +14,7 @@ import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
 import { setGamesMapState, updateGameItemState } from './app.state';
-import { makeIconFromPath } from './game.icon';
+import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -428,106 +428,65 @@ async function uploadIcon(steamAppId, filePath) {
   }
 }
 
+async function createOrUpdateGameItem(steamAppId, gameItem) {
+  // do not calculate and store hash/size for steam games here
+  // we do it when the game is uploaded to the remote
+  if (gameItem.source === 'steam') {
+    // if it's a steam game then icon was loaded from a local path or it's empty
+    // so we need to convert it to a 256x256 JPG
+    gameItem.icon = await makeIconFromLoadedSteamIcon(gameItem.icon);
+    return await db_createGameItemFromSteamData(steamAppId, gameItem);
+  }
+
+  // do not upload/update the icon here
+  // icon changes are done separately for created records
+  return await db_updateGameItem(steamAppId, gameItem);
+}
+
 async function saveGameItem(steamAppId, gameItem) {
-  console.log('Saving game item:', steamAppId, gameItem);
+  console.log('games::saveGameItem: Saving game item:', steamAppId, gameItem);
 
   try {
     const validationErrors = validateGameItem(gameItem);
     if (validationErrors.length) {
       return {
-        success: false,
-        message: 'Validation errors',
-        errors: validationErrors,
+        status: 'error',
+        error: {
+          message: 'Validation errors',
+          errors: validationErrors,
+        },
       };
     }
 
-    let result = {};
+    const savedGameItem = await createOrUpdateGameItem(steamAppId, gameItem);
 
-    // todo: extract into a separate function
-    if (gameItem.source === 'steam') {
-      // run some validations
-      if (gameItem.icon) {
-        // try to use the steam icon when the record is created for the first time
-        const iconBuffer = Buffer.from(gameItem.icon, 'base64');
-        const image = await Jimp.fromBuffer(iconBuffer);
-
-        // we need to convert image to a 256x256 JPG
-        const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
-        gameItem.icon = resizedImage;
-      }
-
-      // do not calculate and store hash/size for steam games here
-      // we do it when the game is uploaded to the remote
-
-      // we also need to calculate the local hash and size based on the given path
-      // if it's not possible (wrong local path is given) then we cannot create
-      // the game in the DB -- we need a hash/size baseline
-      // and if the game is being created from a Steam game instance
-      // that means the game exists and should be possible to calculate
-      // the hash/size pair
-      // try {
-      //   const { hash: localHash, sizeInBytes: localSizeInBytes } = await getLocalDirectoryHashAndSize(gameItem.realLocalGamePath);
-      //   console.log('==============localHash: ' + localHash);
-      //   console.log('==============localSizeInBytes: ' + localSizeInBytes);
-      //   gameItem.hash = localHash;
-      //   gameItem.sizeInBytes = localSizeInBytes;
-
-      //   // get hash and size for the local prefix, which will be the initial prefix
-      //   // initial prefix won't change once created, every Steam account will
-      //   // use that as a baseline or their own ones if existed
-      //   // ...
-      //   // prefix might be optional for PS2/PS3 and some other games/launchers
-
-      //   if (gameItem.launcher === 'PORT_PROTON') {
-      //     const config = getConfig();
-      //     const prefixesBasePath = config.client.prefixes_path;
-      //     const prefixPath = path.join(prefixesBasePath, gameItem.prefixLocation);
-      //     console.log('prefixesPath: ' + prefixPath);
-
-      //     const { hash: prefixHash, sizeInBytes: prefixSizeInBytes } = await getLocalDirectoryHashAndSize(prefixPath);
-      //     console.log('==============prefixHash: ' + prefixHash);
-      //     console.log('==============prefixSizeInBytes: ' + prefixSizeInBytes);
-      //     gameItem.prefixHash = prefixHash;
-      //     gameItem.prefixSizeInBytes = prefixSizeInBytes;
-      //   }
-      // } catch (error) {
-      //   console.log('Failed to create and save game item to the database: getLocalDirectoryHashAndSize');
-      //   return {
-      //     success: false,
-      //     message: 'Failed to create game item; getLocalDirectoryHashAndSize error: ' + error,
-      //   };
-      // }
-
-      result = await db_createGameItemFromSteamData(steamAppId, gameItem);
-    } else {
-      // do not upload/update the icon here
-      // icon changes are done separately for created records
-      result = await db_updateGameItem(steamAppId, gameItem);
-    }
-
-    if (!result) {
-      console.log('Failed to save game item to the database');
+    if (!savedGameItem) {
+      console.log('games::saveGameItem: Failed to save game item to the database');
       return {
-        success: false,
-        message: 'Failed to save game item to the database',
+        status: 'error',
+        error: {
+          message: 'Failed to save game item to the database',
+        },
       };
     }
 
     // after game is saved we need to refresh all the data for it
     // and recalculate hash/size
-    console.log('SAVED GAME RESULT: ' + result);
-    const game = await adjustedGameWithLocalAndRemoteDetails(result);
+    console.log('games::saveGameItem: SAVED GAME RESULT: ', savedGameItem);
+
+    const updatedGameItem = updateGameItemState(steamAppId, savedGameItem);
 
     return {
-      success: true,
-      message: 'Game item saved successfully',
-      gameItem: game,
+      status: 'success',
+      gameItem: updatedGameItem,
     };
   } catch (error) {
-    console.error('Error saving game item:', error);
+    console.error('games::saveGameItem: Error saving game item:', error);
     return {
-      success: false,
-      message: 'Failed to save game item: ' + error,
+      status: 'error',
+      error: {
+        message: 'Failed to save game item: ' + error,
+      },
     };
   }
 }
@@ -535,38 +494,39 @@ async function saveGameItem(steamAppId, gameItem) {
 function validateGameItem(gameItem) {
   const errors = [];
 
+  if (!gameItem) {
+    console.log('games::validateGameItem: gameItem is empty');
+    errors.push('Empty game item');
+    return errors;
+  }
+
   if (!gameItem.steamTitle || !gameItem.steamTitle.trim()) {
-    console.log('validateGameItem: steamTitle is empty');
+    console.log('games::validateGameItem: steamTitle is empty');
     errors.push(`Empty field: steamTitle ("${gameItem.steamTitle}")`);
   }
 
   if (!gameItem.steamExeTarget || !gameItem.steamExeTarget.trim()) {
-    console.log('validateGameItem: steamExeTarget is empty');
+    console.log('games::validateGameItem: steamExeTarget is empty');
     errors.push(`Empty field: steamExeTarget ("${gameItem.steamExeTarget}")`);
   }
 
   if (!gameItem.steamStartDir || !gameItem.steamStartDir.trim()) {
-    console.log('validateGameItem: steamStartDir is empty');
+    console.log('games::validateGameItem: steamStartDir is empty');
     errors.push(`Empty field: steamStartDir ("${gameItem.steamStartDir}")`);
   }
 
   if (!gameItem.launcher || !gameItem.launcher.trim()) {
-    console.log('validateGameItem: launcher is empty');
+    console.log('games::validateGameItem: launcher is empty');
     errors.push(`Empty field: launcher ("${gameItem.launcher}")`);
   }
 
-  if (!gameItem.nasLocation || !gameItem.nasLocation.trim()) {
-    console.log('validateGameItem: nasLocation is empty');
-    errors.push(`Empty field: nasLocation ("${gameItem.nasLocation}")`);
-  }
-
-  if (!gameItem.clientLocation || !gameItem.clientLocation.trim()) {
-    console.log('validateGameItem: clientLocation is empty');
-    errors.push(`Empty field: clientLocation ("${gameItem.clientLocation}")`);
+  if (!gameItem.gameLocation || !gameItem.gameLocation.trim()) {
+    console.log('games::validateGameItem: gameLocation is empty');
+    errors.push(`Empty field: gameLocation ("${gameItem.gameLocation}")`);
   }
 
   if (gameItem.launcher === 'PORT_PROTON' && (!gameItem.prefixLocation || !gameItem.prefixLocation.trim())) {
-    console.log('validateGameItem: prefixLocation is empty');
+    console.log('games::validateGameItem: prefixLocation is empty');
     errors.push(`Empty field: prefixLocation ("${gameItem.prefixLocation}")`);
   }
 
@@ -576,12 +536,12 @@ function validateGameItem(gameItem) {
 
   // these validations are steam specific
   if (!gameItem.realLocalGamePath || !gameItem.realLocalGamePath.trim()) {
-    console.log('validateGameItem: realLocalGamePath is empty');
+    console.log('games::validateGameItem: realLocalGamePath is empty');
     errors.push(`Empty field: realLocalGamePath ("${gameItem.realLocalGamePath}")`);
   }
 
   if (!fs.existsSync(gameItem.realLocalGamePath)) {
-    console.log('validateGameItem: game not found at this location: ' + gameItem.realLocalGamePath);
+    console.log('games::validateGameItem: game not found at this location: ' + gameItem.realLocalGamePath);
     errors.push(`Game not found at the following location: ${gameItem.realLocalGamePath}`);
   }
 

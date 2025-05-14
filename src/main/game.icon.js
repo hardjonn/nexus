@@ -55,4 +55,23 @@ async function makeIconFromPath(iconPath) {
   }
 }
 
-export { loadIconFromPath, makeIconFromDbIcon, makeIconFromPath };
+async function makeIconFromLoadedSteamIcon(icon) {
+  try {
+    if (!icon) {
+      return null;
+    }
+
+    // try to use the steam icon when the record is created for the first time
+    const iconBuffer = Buffer.from(icon, 'base64');
+    const image = await Jimp.fromBuffer(iconBuffer);
+
+    // we need to convert image to a 256x256 JPG
+    const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
+    return resizedImage;
+  } catch (error) {
+    console.error('game.icon::makeIconFromLoadedSteamIcon: Error making icon from loaded steam icon:', error);
+    return null;
+  }
+}
+
+export { loadIconFromPath, makeIconFromDbIcon, makeIconFromPath, makeIconFromLoadedSteamIcon };
