@@ -181,6 +181,10 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
+  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
+    return false;
+  }
+
   return true;
 });
 
@@ -379,10 +383,13 @@ async function onActionRefreshHashAndSize() {
 
     if (response.status !== 'success') {
       data.errorMessage = response.error.message || 'Something went wrong while refreshing the hash and size.';
+      data.errors = response.error.errors;
       return;
     }
 
     data.successMessage = 'Hash and size refreshed successfully!';
+    data.errorMessage = response.error.message;
+    data.errors = response.error.errors;
 
     emit('update-game-item', response.gameItem);
   } catch (error) {
