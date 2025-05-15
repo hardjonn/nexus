@@ -13,15 +13,16 @@ async function abortRsyncTransferByItemId(itemId) {
     }
 
     return {
-      success: true,
-      message: 'Rsync transfer aborted successfully',
+      status: 'success',
     };
   } catch (error) {
-    console.error('Error aborting rsync transfer:', error);
+    console.error('transfer::abortRsyncTransferByItemId: Error aborting rsync transfer:', error);
 
     return {
-      success: false,
-      message: 'Failed to abort rsync transfer: ' + error,
+      status: 'error',
+      error: {
+        message: 'Failed to abort rsync transfer: ' + error,
+      },
     };
   }
 }
@@ -43,9 +44,10 @@ async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, use
   // if it succeeds, continue
   // without the remote directory rsync will fail
   try {
+    console.log('transfer::uploadWithRsync: Making remote folder: ', destinationPath);
     await makeDirectoryOnRemote(host, username, privateKeyPath, destinationPath);
   } catch (error) {
-    console.error('Error making remote folder:', error);
+    console.error('transfer::uploadWithRsync: Error making remote folder:', error);
     throw error;
   }
 
@@ -55,8 +57,8 @@ async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, use
     const sourcePathWithTrailingSlash = sourcePath.endsWith('/') ? sourcePath : sourcePath + '/';
     const destinationPathWithTrailingSlash = remotePath.endsWith('/') ? remotePath : remotePath + '/';
 
-    console.log('remote: ' + destinationPathWithTrailingSlash);
-    console.log('sourcePath: ' + sourcePathWithTrailingSlash);
+    console.log('transfer::uploadWithRsync: Destination path: ' + destinationPathWithTrailingSlash);
+    console.log('transfer::uploadWithRsync: Source path: ' + sourcePathWithTrailingSlash);
 
     const sshCommand = [
       'ssh',
@@ -150,7 +152,7 @@ async function makeDirectoryOnRemote(host, username, privateKeyPath, remoteDirPa
   const ssh = new NodeSSH();
 
   try {
-    console.log(`Connecting to ${host}...`);
+    console.log(`transfer::makeDirectoryOnRemote: Connecting to ${host}...`);
     await ssh.connect({
       host: host,
       username: username,
@@ -161,15 +163,15 @@ async function makeDirectoryOnRemote(host, username, privateKeyPath, remoteDirPa
 
     const mkDirCommand = `sh -c "mkdir -p ${escapedDirPath}"`;
 
-    console.log('MKDIR Command:', mkDirCommand);
+    console.log('transfer::makeDirectoryOnRemote: MKDIR Command:', mkDirCommand);
 
     await ssh.execCommand(mkDirCommand);
   } catch (error) {
-    console.error('Error making remote folder:', error);
+    console.error('transfer::makeDirectoryOnRemote: Error making remote folder:', error);
     throw error; // Re-throw the error for upstream handling
   } finally {
     if (ssh.connection) {
-      console.log('Disconnecting SSH session.');
+      console.log('transfer::makeDirectoryOnRemote: Disconnecting SSH session.');
       ssh.dispose();
     }
   }

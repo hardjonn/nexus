@@ -31,8 +31,8 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Local Game Hash:', localHash);
     console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Local Game Size:', localSizeInBytes);
 
-    game.localHash = localHash;
-    game.localSizeInBytes = localSizeInBytes;
+    game.localGameHash = localHash;
+    game.localGameSizeInBytes = localSizeInBytes;
   } catch (error) {
     console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting local directory hash and size:', error);
     errors.push(`Error getting local directory hash and size: ${error.message}`);
@@ -46,8 +46,8 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Game Hash:', remoteHash);
     console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Game Size:', remoteSizeInBytes);
 
-    game.remoteHash = remoteHash;
-    game.remoteSizeInBytes = remoteSizeInBytes;
+    game.remoteGameHash = remoteHash;
+    game.remoteGameSizeInBytes = remoteSizeInBytes;
   } catch (error) {
     console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting remote directory hash and size:', error);
     errors.push(`Error getting remote directory hash and size: ${error.message}`);
@@ -269,4 +269,21 @@ function getDirectoryHashAndSizeUsingNodeJs(dirPath) {
   return { hash: hash, sizeInBytes: totalSizeInBytes };
 }
 
-export { adjustedGameWithLocalAndRemoteDetails };
+function getGameAndPrefixPath(gameItem) {
+  const config = getConfig();
+
+  const localGamePath = gameItem.realLocalGamePath;
+  const remoteGamePath = path.join(config.remote_lib.games_path, gameItem.gameLocation);
+
+  const localPrefixPath = gameItem.realLocalPrefixPath;
+  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.remote_lib.prefixes_path, config.remote_lib.initial_prefixes, gameItem.prefixLocation) : null;
+
+  return {
+    localGamePath: localGamePath,
+    remoteGamePath: remoteGamePath,
+    localPrefixPath: localPrefixPath,
+    remotePrefixPath: remotePrefixPath,
+  };
+}
+
+export { adjustedGameWithLocalAndRemoteDetails, getGameAndPrefixPath, getLocalDirectoryHashAndSize, getRemoteDirectoryHashAndSize };

@@ -73,11 +73,11 @@ async function db_updateGameItem(steamAppId, gameItem) {
       prefix_hash_md5: gameItem.prefixHash,
       prefix_size_in_bytes: gameItem.prefixSizeInBytes,
     });
-    console.log(`Game item ${steamAppId} updated successfully`);
+    console.log(`game.queries::db_updateGameItem: Game item ${steamAppId} updated successfully`);
 
     return makeGameItemFromDbItem(game);
   } catch (error) {
-    console.error('Error saving game item:', error);
+    console.error('game.queries::db_updateGameItem: Error saving game item:', error);
     return null;
   }
 }

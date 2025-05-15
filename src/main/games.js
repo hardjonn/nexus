@@ -7,7 +7,7 @@ import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
 import { setGamesMapState, updateGameItemState } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
-import { adjustedGameWithLocalAndRemoteDetails } from './game.details';
+import { adjustedGameWithLocalAndRemoteDetails, getGameAndPrefixPath, getLocalDirectoryHashAndSize, getRemoteDirectoryHashAndSize } from './game.details';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -308,40 +308,59 @@ async function abortRsyncTransfer(itemId) {
 async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   // run some validations
   if (gameItem.source !== 'db' || (gameItem.status !== 'DRAFT' && gameItem.status !== 'UPLOADING')) {
-    console.log('Game is not in DRAFT state');
+    console.log('games::uploadGameToRemote: Game is not in DRAFT state');
     return {
-      success: false,
-      message: 'Game is not in DRAFT state',
+      status: 'error',
+      error: {
+        message: 'Game is not in DRAFT state',
+      },
     };
   }
 
   // 0. update the game state to uploading
   try {
+    console.log('games::uploadGameToRemote: Updating the game state to UPLOADING...');
     await db_updateGameState(steamAppId, 'UPLOADING');
+
+    gameItem = updateGameItemState(steamAppId, {
+      status: 'UPLOADING',
+    });
+
+    console.log('games::uploadGameToRemote: Game state updated to UPLOADING');
   } catch (error) {
-    console.error('Error updating game state to uploading:', error);
+    console.error('games::uploadGameToRemote: Error updating game state to uploading:', error);
     return {
-      success: false,
-      message: 'Failed to update game state to uploading: ' + error,
+      status: 'error',
+      error: {
+        message: 'Failed to update game state to uploading: ' + error,
+      },
     };
   }
 
+  console.log('games::uploadGameToRemote: Game state updated to UPLOADING');
+  console.log('games::uploadGameToRemote: Launcher:', gameItem.launcher);
+  console.log('games::uploadGameToRemote: Prefix location:', gameItem.prefixLocation);
+
   if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixLocation) {
-    console.log('Prefix location is empty');
+    console.log('games::uploadGameToRemote: Prefix location is empty');
     return {
-      success: false,
-      message: 'Prefix location is empty',
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Prefix location is empty',
+      },
     };
   }
 
   const config = getConfig();
-  const localGamePath = gameItem.realLocalGamePath;
-  const remoteGamePath = path.join(config.nas.games_lib_path, gameItem.nasLocation);
-  const localPrefixPath = gameItem.prefixLocation ? path.join(config.client.prefixes_path, gameItem.prefixLocation) : null;
-  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.nas.prefixes_path, 'initial', gameItem.prefixLocation) : null;
 
-  console.log('remoteGamePath: ' + remoteGamePath);
-  console.log('localGamePath: ' + localGamePath);
+  const { localGamePath, remoteGamePath, localPrefixPath, remotePrefixPath } = getGameAndPrefixPath(gameItem);
+
+  console.log('games::uploadGameToRemote: localGamePath: ' + localGamePath);
+  console.log('games::uploadGameToRemote: remoteGamePath: ' + remoteGamePath);
+
+  console.log('games::uploadGameToRemote: localPrefixPath: ' + localPrefixPath);
+  console.log('games::uploadGameToRemote: remotePrefixPath: ' + remotePrefixPath);
 
   try {
     // 1. upload the game to the remote
@@ -349,22 +368,25 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
       abortId: steamAppId,
       sourcePath: localGamePath,
       destinationPath: remoteGamePath,
-      host: config.nas.host,
-      username: config.nas.user,
-      privateKeyPath: config.nas.private_key_path,
+      host: config.remote_lib.host,
+      username: config.remote_lib.user,
+      privateKeyPath: config.remote_lib.private_key_path,
       onProgress: (output) => {
         const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
         progressCallback(augmentedWithSteamAppIdOutput);
       },
     });
 
-    console.log('Upload completed successfully!');
+    console.log('games::uploadGameToRemote: Upload completed successfully!');
   } catch (error) {
-    console.error('Upload failed:', error);
+    console.error('games::uploadGameToRemote: Upload failed:', error);
 
     return {
-      success: false,
-      message: 'Failed to upload game to remote: ' + error,
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Failed to upload game to remote: ' + error,
+      },
     };
   }
 
@@ -373,103 +395,145 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
     //  - the launcher has to be PORT_PROTON
     //  - the remote initial prefix has to be empty - record in the DB should not exist
     if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash && localPrefixPath && remotePrefixPath) {
-      console.log('localPrefixPath: ' + localPrefixPath);
-      console.log('remotePrefixPath: ' + remotePrefixPath);
+      console.log('games::uploadGameToRemote: Uploading prefix...');
 
       await uploadWithRsync({
         sourcePath: localPrefixPath,
         destinationPath: remotePrefixPath,
-        host: config.nas.host,
-        username: config.nas.user,
-        privateKeyPath: config.nas.private_key_path,
+        host: config.remote_lib.host,
+        username: config.remote_lib.user,
+        privateKeyPath: config.remote_lib.private_key_path,
         onProgress: (output) => {
           const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
           progressCallback(augmentedWithSteamAppIdOutput);
         },
       });
 
-      console.log('Upload prefix completed successfully!');
+      console.log('games::uploadGameToRemote: Upload prefix completed successfully!');
     }
   } catch (error) {
-    console.error('Upload prefix failed:', error);
+    console.error('games::uploadGameToRemote: Upload prefix failed:', error);
 
     return {
-      success: false,
-      message: 'Failed to upload prefix to remote: ' + error,
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Failed to upload prefix to remote: ' + error,
+      },
     };
   }
 
   // 3. calculate the hash and size for the remote and local
   try {
     const { hash: localGameHash, sizeInBytes: localGameSizeInBytes } = await getLocalDirectoryHashAndSize(localGamePath);
-    console.log('==============localGameHash: ' + localGameHash);
-    console.log('==============localGameSizeInBytes: ' + localGameSizeInBytes);
+    console.log('games::uploadGameToRemote: localGameHash: ' + localGameHash);
+    console.log('games::uploadGameToRemote: localGameSizeInBytes: ' + localGameSizeInBytes);
 
     const { hash: remoteGameHash, sizeInBytes: remoteGameSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remoteGamePath);
-    console.log('==============remoteGameHash: ' + remoteGameHash);
-    console.log('==============remoteGameSizeInBytes: ' + remoteGameSizeInBytes);
+    console.log('games::uploadGameToRemote: remoteGameHash: ' + remoteGameHash);
+    console.log('games::uploadGameToRemote: remoteGameSizeInBytes: ' + remoteGameSizeInBytes);
 
     // we need to make sure the local game size and hash match the remote
     if (localGameHash !== remoteGameHash || localGameSizeInBytes !== remoteGameSizeInBytes) {
-      console.log('Local game size and hash do not match remote');
+      console.log('games::uploadGameToRemote: Local game size and hash do not match remote');
       return {
-        success: false,
-        message: 'Local game size and hash do not match remote',
+        status: 'error',
+        gameItem: gameItem,
+        error: {
+          message: 'Local game size and hash do not match remote',
+        },
       };
     }
 
-    gameItem.hash = localGameHash;
-    gameItem.sizeInBytes = localGameSizeInBytes;
+    gameItem.gameHash = localGameHash;
+    gameItem.gameSizeInBytes = localGameSizeInBytes;
+    gameItem.remoteGameHash = remoteGameHash;
+    gameItem.remoteGameSizeInBytes = remoteGameSizeInBytes;
+
+    gameItem = updateGameItemState(steamAppId, {
+      localGameHash: localGameHash,
+      localGameSizeInBytes: localGameSizeInBytes,
+      gameHash: localGameHash,
+      gameSizeInBytes: localGameSizeInBytes,
+      remoteGameHash: remoteGameHash,
+      remoteGameSizeInBytes: remoteGameSizeInBytes,
+    });
 
     // the prefix check should be done only on the initial upload
     if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash) {
       const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(localPrefixPath);
-      console.log('==============localPrefixHash: ' + localPrefixHash);
-      console.log('==============localPrefixSizeInBytes: ' + localPrefixSizeInBytes);
+      console.log('games::uploadGameToRemote: localPrefixHash: ' + localPrefixHash);
+      console.log('games::uploadGameToRemote: localPrefixSizeInBytes: ' + localPrefixSizeInBytes);
 
       const { hash: remotePrefixHash, sizeInBytes: remotePrefixSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remotePrefixPath);
-      console.log('==============remotePrefixHash: ' + remotePrefixHash);
-      console.log('==============remotePrefixSizeInBytes: ' + remotePrefixSizeInBytes);
+      console.log('games::uploadGameToRemote: remotePrefixHash: ' + remotePrefixHash);
+      console.log('games::uploadGameToRemote: remotePrefixSizeInBytes: ' + remotePrefixSizeInBytes);
 
       // we need to make sure the local prefix size and hash match the remote
       if (localPrefixHash !== remotePrefixHash || localPrefixSizeInBytes !== remotePrefixSizeInBytes) {
-        console.log('Local prefix size and hash do not match remote');
+        console.log('games::uploadGameToRemote: Local prefix size and hash do not match remote');
         return {
-          success: false,
-          message: 'Local prefix size and hash do not match remote',
+          status: 'error',
+          gameItem: gameItem,
+          error: {
+            message: 'Local prefix size and hash do not match remote',
+          },
         };
       }
 
       gameItem.prefixHash = localPrefixHash;
       gameItem.prefixSizeInBytes = localPrefixSizeInBytes;
+      gameItem.localPrefixHash = localPrefixHash;
+      gameItem.localPrefixSizeInBytes = localPrefixSizeInBytes;
+      gameItem.remotePrefixHash = remotePrefixHash;
+      gameItem.remotePrefixSizeInBytes = remotePrefixSizeInBytes;
+
+      gameItem = updateGameItemState(steamAppId, {
+        localPrefixHash: localPrefixHash,
+        localPrefixSizeInBytes: localPrefixSizeInBytes,
+        prefixHash: localPrefixHash,
+        prefixSizeInBytes: localPrefixSizeInBytes,
+        remotePrefixHash: remotePrefixHash,
+        remotePrefixSizeInBytes: remotePrefixSizeInBytes,
+      });
     }
   } catch (error) {
-    console.error('Error calculating hash and size:', error);
+    console.error('games::uploadGameToRemote: Error calculating hash and size:', error);
     return {
-      success: false,
-      message: 'Failed to calculate hash and size: ' + error,
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Failed to calculate hash and size: ' + error,
+      },
     };
   }
 
   // 4. update the game item in the DB
   try {
-    console.log('Updating game item in the DB...');
+    console.log('games::uploadGameToRemote: Updating game item in the DB...');
     gameItem.status = 'ACTIVE';
 
     const result = await db_updateGameItem(steamAppId, gameItem);
-    let game = await augmentGameWithRealLocalGamePath(result);
-    game = await adjustedGameWithLocalAndRemoteDetails(game);
+    // let game = await augmentGameWithRealLocalGamePath(result);
+    // game = await adjustedGameWithLocalAndRemoteDetails(game);
+
+    gameItem = updateGameItemState(steamAppId, {
+      status: 'ACTIVE',
+    });
 
     return {
-      success: true,
+      status: 'success',
       message: 'Game item saved successfully',
-      gameItem: game,
+      gameItem: gameItem,
     };
   } catch (error) {
-    console.error('Error updating game item:', error);
+    console.error('games::uploadGameToRemote: Error updating game item:', error);
     return {
-      success: false,
-      message: 'Failed to update game item: ' + error,
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Failed to update game item: ' + error,
+      },
     };
   }
 }

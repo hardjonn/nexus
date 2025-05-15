@@ -80,14 +80,14 @@ const currentIcon = computed(() => {
 });
 
 const hashMatch = computed(() => {
-  return data.gameItem.hash === data.gameItem.localHash && data.gameItem.localHash === data.gameItem.remoteHash;
+  return data.gameItem.gameHash === data.gameItem.localGameHash && data.gameItem.localGameHash === data.gameItem.remoteGameHash;
 });
 const hashClass = computed(() => {
   return hashMatch.value ? 'text-gray-400' : 'text-red-500';
 });
 
 const sizeMatch = computed(() => {
-  return data.gameItem.sizeInBytes === data.gameItem.localSizeInBytes && data.gameItem.localSizeInBytes === data.gameItem.remoteSizeInBytes;
+  return data.gameItem.gameSizeInBytes === data.gameItem.localGameSizeInBytes && data.gameItem.localGameSizeInBytes === data.gameItem.remoteGameSizeInBytes;
 });
 const sizeClass = computed(() => {
   return sizeMatch.value ? 'text-gray-400' : 'text-red-500';
@@ -117,48 +117,48 @@ function formattedSize(size) {
   return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-const localState = computed(() => {
-  const state = [];
+// const localState = computed(() => {
+//   const state = [];
 
-  if (!data.gameItem.realLocalGamePath) {
-    state.push('Game not found locally at any location: probably not installed');
-  }
+//   if (!data.gameItem.realLocalGamePath) {
+//     state.push('Game not found locally at any location: probably not installed');
+//   }
 
-  if (!data.gameItem.realLocalPrefixPath) {
-    state.push('Prefix not found locally at any location: probably not installed');
-  }
+//   if (!data.gameItem.realLocalPrefixPath) {
+//     state.push('Prefix not found locally at any location: probably not installed');
+//   }
 
-  if (data.gameItem.hash === data.gameItem.localHash) {
-    state.push('Local hash matches expected DB hash: game installed');
-  } else {
-    state.push('Local hash does not match expected DB hash: probably not installed or not fully downloaded');
-  }
+//   if (data.gameItem.hash === data.gameItem.localHash) {
+//     state.push('Local hash matches expected DB hash: game installed');
+//   } else {
+//     state.push('Local hash does not match expected DB hash: probably not installed or not fully downloaded');
+//   }
 
-  if (data.gameItem.sizeInBytes === data.gameItem.localSizeInBytes) {
-    state.push('Local size matches expected DB size: game installed');
-  } else {
-    state.push('Local size does not match expected DB size: probably not installed or not fully downloaded');
-  }
+//   if (data.gameItem.sizeInBytes === data.gameItem.localSizeInBytes) {
+//     state.push('Local size matches expected DB size: game installed');
+//   } else {
+//     state.push('Local size does not match expected DB size: probably not installed or not fully downloaded');
+//   }
 
-  return state;
-});
-const remoteState = computed(() => {
-  const state = [];
+//   return state;
+// });
+// const remoteState = computed(() => {
+//   const state = [];
 
-  if (!data.gameItem.hash) {
-    state.push('No hash found in DB: game is not uploaded to remote');
-  }
+//   if (!data.gameItem.hash) {
+//     state.push('No hash found in DB: game is not uploaded to remote');
+//   }
 
-  if (data.gameItem.hash && data.gameItem.hash !== data.gameItem.remoteHash) {
-    state.push('Remote hash does not match expected DB hash: probably noy fully uploaded');
-  }
+//   if (data.gameItem.hash && data.gameItem.hash !== data.gameItem.remoteHash) {
+//     state.push('Remote hash does not match expected DB hash: probably noy fully uploaded');
+//   }
 
-  if (data.gameItem.sizeInBytes !== data.gameItem.remoteSizeInBytes) {
-    state.push('Remote size does not match expected DB size: probably noy fully uploaded');
-  }
+//   if (data.gameItem.sizeInBytes !== data.gameItem.remoteSizeInBytes) {
+//     state.push('Remote size does not match expected DB size: probably noy fully uploaded');
+//   }
 
-  return state;
-});
+//   return state;
+// });
 
 const shouldShowUploadToRemoteButton = computed(() => {
   if (data.gameItem.source === 'steam') {
@@ -218,6 +218,8 @@ function activateProcessingAction(action) {
   data.errorMessage = null;
   data.successMessage = null;
   data.errors = null;
+  data.progress = null;
+  data.progressContent = null;
 }
 
 function iconChanged(e) {
@@ -318,51 +320,65 @@ async function onActionSave() {
 }
 
 async function onActionUploadGameToRemote() {
-  data.isUploading = true;
-  data.errorMessage = null;
-  data.progressMessage = 'Uploading game to the Remote...';
-  data.successMessage = null;
-  data.errors = null;
-  data.progress = null;
-  data.progressContent = null;
+  activateProcessingAction(processingActions.uploadingGameToRemote);
 
-  const rawGameItem = toRaw(data.gameItem);
-  delete rawGameItem.errors;
-  console.log('Raw Game Item: ', rawGameItem);
+  try {
+    const rawGameItem = toRaw(data.gameItem);
+    console.log('Raw Game Item: ', rawGameItem);
 
-  const response = await uploadGameToRemote(props.gameItem.steamAppId, rawGameItem);
-  console.log(response);
+    const response = await uploadGameToRemote(props.gameItem.steamAppId, rawGameItem);
+    console.log(response);
 
-  data.isUploading = false;
-  data.progressMessage = null;
-  data.progress = null;
+    if (!response) {
+      data.errorMessage = 'Something went wrong while uploading the game to the remote.';
+      return;
+    }
 
-  if (!response) {
-    data.errorMessage = 'Something went wrong while uploading the game to the remote.';
-    return;
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while uploading the game to the remote.';
+      data.errors = response.error.errors;
+
+      if (response.gameItem) {
+        emit('update-game-item', response.gameItem);
+      }
+
+      return;
+    }
+
+    data.successMessage = 'Game uploaded successfully!';
+
+    emit('update-game-item', response.gameItem);
+  } catch (error) {
+    console.error('Error uploading the game to the remote:', error);
+    data.errorMessage = 'An error occurred while uploading the game to the remote:' + error.message;
+  } finally {
+    data.processingAction = null;
   }
-
-  if (!response.success) {
-    data.errorMessage = response.message || 'Something went wrong while uploading the game to the remote.';
-    return;
-  }
-
-  data.gameItem = { ...response.gameItem };
-
-  data.successMessage = 'Game uploaded successfully!';
 }
 
 async function onActionCancelUploadGameToRemote() {
-  const response = await abortGameUpload(props.gameItem.steamAppId);
+  activateProcessingAction(processingActions.abortingGameUpload);
 
-  if (!response) {
-    data.errorMessage = 'Something went wrong while canceling the upload.';
-    return;
-  }
+  try {
+    const response = await abortGameUpload(props.gameItem.steamAppId);
 
-  if (!response.success) {
-    data.errorMessage = response.message || 'Something went wrong while canceling the upload.';
-    return;
+    if (!response) {
+      data.errorMessage = 'Something went wrong while canceling the upload.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while canceling the upload.';
+      data.errors = response.error.errors;
+      return;
+    }
+
+    data.successMessage = 'Game upload canceled successfully!';
+  } catch (error) {
+    console.error('Error canceling the upload:', error);
+    data.errorMessage = 'An error occurred while canceling the upload:' + error.message;
+  } finally {
+    data.processingAction = null;
   }
 }
 
@@ -593,22 +609,22 @@ async function onActionRefreshHashAndSize() {
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight dark:text-white">DB Hash:</span>
-        <span class="font-normal" :class="hashClass">{{ data.gameItem.hash }}</span>
+        <span class="font-normal" :class="hashClass">{{ data.gameItem.gameHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">DB Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.sizeInBytes }} ({{ formattedSize(data.gameItem.sizeInBytes) }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.gameSizeInBytes }} ({{ formattedSize(data.gameItem.gameSizeInBytes) }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Hash:</span>
-        <span class="font-normal" :class="hashClass">{{ data.gameItem.localHash }}</span>
+        <span class="font-normal" :class="hashClass">{{ data.gameItem.localGameHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.localSizeInBytes }} ({{ formattedSize(data.gameItem.localSizeInBytes) }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.localGameSizeInBytes }} ({{ formattedSize(data.gameItem.localGameSizeInBytes) }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash:</span>
-        <span class="font-normal" :class="hashClass">{{ data.gameItem.remoteHash }}</span>
+        <span class="font-normal" :class="hashClass">{{ data.gameItem.remoteGameHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.remoteSizeInBytes }} ({{ formattedSize(data.gameItem.remoteSizeInBytes) }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.remoteGameSizeInBytes }} ({{ formattedSize(data.gameItem.remoteGameSizeInBytes) }})</span>
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
