@@ -8,6 +8,7 @@ import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
 import { setGamesMapState, updateGameItemState } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
 import { adjustedGameWithLocalAndRemoteDetails, getGameAndPrefixPath, getLocalDirectoryHashAndSize, getRemoteDirectoryHashAndSize } from './game.details';
+import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -32,15 +33,8 @@ async function getGames() {
     const gamesFromSteamMap = await steam_getAllGamesMap();
 
     // step 3: merge the two maps
-    // conflict resolution:
-    // 1. if the game is in the DB and not in steam, keep it
-    // 2. if the game is in steam and not in the DB, keep it
-    // 3. if the game is in both, keep the one from the DB
     console.log('games::getGames: merging DB and Steam games');
-    const mergedGamesMap = { ...gamesFromSteamMap, ...gamesFromDbMap };
-
-    console.log('games::getGames: setting games map state');
-    setGamesMapState(mergedGamesMap);
+    const mergedGamesMap = appState_mergeDbAndSteamGamesWithLocalGames(gamesFromDbMap, gamesFromSteamMap);
 
     console.log('games::getGames: returning games');
     return {

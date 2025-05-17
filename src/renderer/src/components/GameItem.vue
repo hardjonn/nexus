@@ -117,6 +117,36 @@ function formattedSize(size) {
   return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+const gameState = computed(() => {
+  if (data.gameItem.source === 'steam') {
+    return 'In Steam Only --> Has to be added to Nexus Library';
+  }
+
+  if (data.gameItem.status === 'DRAFT') {
+    let state = 'Game In Nexus Library --> Not Uploaded';
+
+    if (data.gameItem.launcher === 'PORT_PROTON') {
+      state += ' --> Prefix is Required';
+    }
+
+    return state;
+  }
+
+  if (data.gameItem.status === 'UPLOADING') {
+    return 'Not Fully Uploaded Yet --> Resume Upload';
+  }
+
+  if (data.gameItem.status !== 'ACTIVE') {
+    return data.gameItem.status;
+  }
+
+  if (!data.gameItem.realLocalGamePath) {
+    return 'Game Not Found Locally --> Can Be Downloaded';
+  }
+
+  return 'Game Installed Locally --> Can Be Removed';
+});
+
 // const localState = computed(() => {
 //   const state = [];
 
@@ -565,7 +595,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.steamTitle"
           type="text"
           class="border text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
       </div>
 
@@ -584,6 +614,9 @@ async function onActionRefreshHashAndSize() {
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+        <span class="text-l font-bold tracking-tight dark:text-white">Game State:</span>
+        <span class="font-normal dark:text-yellow-400">{{ gameState }}</span>
+
         <!-- <span class="text-l font-bold tracking-tight dark:text-white">Local State:</span>
         <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
           <li v-for="state in localState" :key="state">{{ state }}</li>
@@ -653,7 +686,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.steamExeTarget"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
 
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Start Dir:</span>
@@ -661,7 +694,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.steamStartDir"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
 
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Launch Args:</span>
@@ -669,7 +702,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.steamLaunchArgs"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
 
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Launcher:</span>
@@ -682,7 +715,7 @@ async function onActionRefreshHashAndSize() {
                 value="NOOP"
                 type="radio"
                 :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!data.isEditing"
+                :disabled="!isProcessingAction(processingActions.editingGameItem)"
                 class="w-4 h-4 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
               <label :for="`launcher-noop-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium0 dark:text-gray-300">NOOP</label>
@@ -696,7 +729,7 @@ async function onActionRefreshHashAndSize() {
                 value="PORT_PROTON"
                 type="radio"
                 :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!data.isEditing"
+                :disabled="!isProcessingAction(processingActions.editingGameItem)"
                 class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
               <label :for="`launcher-port-proton-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">PORT_PROTON</label>
@@ -710,7 +743,7 @@ async function onActionRefreshHashAndSize() {
                 value="PS2"
                 type="radio"
                 :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!data.isEditing"
+                :disabled="!isProcessingAction(processingActions.editingGameItem)"
                 class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
               <label :for="`launcher-ps2-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">PS2</label>
@@ -724,7 +757,7 @@ async function onActionRefreshHashAndSize() {
                 value="PS3"
                 type="radio"
                 :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!data.isEditing"
+                :disabled="!isProcessingAction(processingActions.editingGameItem)"
                 class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
               <label :for="`launcher-ps3-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">PS3</label>
@@ -741,7 +774,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.realLocalGamePath"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
 
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Prefix Path:</span>
@@ -752,7 +785,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.gameLocation"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
 
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Prefix Location:</span>
@@ -760,7 +793,7 @@ async function onActionRefreshHashAndSize() {
           v-model="data.gameItem.prefixLocation"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          :disabled="!data.isEditing"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
       </div>
     </div>
