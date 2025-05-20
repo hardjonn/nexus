@@ -58,7 +58,9 @@ function appState_mergeDbAndSteamGamesWithLocalGames(dbGamesMap, steamGamesMap) 
     remotePrefixHash: null,
     remotePrefixSizeInBytes: 0,
 
-    localState: 'DRAFT',
+    localState: {
+      isDownloading: false,
+    },
   };
 
   for (const [steamAppId, gameItem] of Object.entries(mergedGamesMap)) {
@@ -88,12 +90,21 @@ function appState_mergeDbAndSteamGamesWithLocalGames(dbGamesMap, steamGamesMap) 
 }
 
 function updateGameItemState(steamAppId, fieldsToUpdate) {
-  appState.gamesMap[steamAppId] = {
-    ...appState.gamesMap[steamAppId],
+  const gamesMap = appState.get('gamesMap');
+
+  if (!gamesMap[steamAppId]) {
+    console.error('app.state::updateGameItemState: Game not found for steamAppId', steamAppId);
+    throw new Error('Game not found for steamAppId ' + steamAppId);
+  }
+
+  gamesMap[steamAppId] = {
+    ...gamesMap[steamAppId],
     ...fieldsToUpdate,
   };
 
-  return appState.gamesMap[steamAppId];
+  appState.set('gamesMap', gamesMap);
+
+  return gamesMap[steamAppId];
 }
 
 export { getAppState_GamesMap, setAppState_GamesMap, updateGameItemState, appState_mergeDbAndSteamGamesWithLocalGames };

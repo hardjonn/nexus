@@ -117,6 +117,10 @@ function formattedSize(size) {
   return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+const isDownloading = computed(() => {
+  return data.gameItem.localState.isDownloading;
+});
+
 const gameState = computed(() => {
   if (data.gameItem.source === 'steam') {
     return 'In Steam Only --> Has to be added to Nexus Library';
@@ -142,6 +146,10 @@ const gameState = computed(() => {
 
   if (!data.gameItem.realLocalGamePath) {
     return 'Game Not Found Locally --> Can Be Downloaded';
+  }
+
+  if (data.gameItem.localState.isDownloading) {
+    return "Game is being downloaded --> Can Be Removed After it's Downloaded";
   }
 
   return 'Game Installed Locally --> Can Be Removed';
@@ -319,7 +327,7 @@ async function onActionSave() {
   activateProcessingAction(processingActions.savingGameItem);
 
   try {
-    const rawGameItem = toRaw(data.gameItem);
+    const rawGameItem = makeRawGameItem();
     console.log('onActionSave: Raw Game Item: ', rawGameItem);
 
     const response = await saveGameItem(data.gameItem.steamAppId, rawGameItem);
@@ -353,7 +361,7 @@ async function onActionUploadGameToRemote() {
   activateProcessingAction(processingActions.uploadingGameToRemote);
 
   try {
-    const rawGameItem = toRaw(data.gameItem);
+    const rawGameItem = makeRawGameItem();
     console.log('Raw Game Item: ', rawGameItem);
 
     const response = await uploadGameToRemote(props.gameItem.steamAppId, rawGameItem);
@@ -415,7 +423,7 @@ async function onActionCancelUploadGameToRemote() {
 async function onActionRefreshHashAndSize() {
   activateProcessingAction(processingActions.refreshingHashAndSize);
 
-  const rawGameItem = toRaw(data.gameItem);
+  const rawGameItem = makeRawGameItem();
 
   try {
     const response = await refreshHashAndSize(data.gameItem.steamAppId, rawGameItem);
@@ -444,6 +452,20 @@ async function onActionRefreshHashAndSize() {
   } finally {
     data.processingAction = null;
   }
+}
+
+function makeRawGameItem() {
+  const rawGameItem = toRaw(data.gameItem);
+
+  if (!data.gameItem.localState) {
+    return rawGameItem;
+  }
+
+  const rawLocalState = toRaw(data.gameItem.localState);
+
+  rawGameItem.localState = rawLocalState;
+
+  return rawGameItem;
 }
 
 // const emit = defineEmits(['openGame', 'deleteGame', 'editGame']);

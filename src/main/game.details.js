@@ -98,6 +98,16 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
 }
 
 async function getLocalDirectoryHashAndSize(dirPath) {
+  if (!dirPath) {
+    console.error('game.details::getLocalDirectoryHashAndSize: Directory path is not specified');
+    throw new Error('Directory path is not specified');
+  }
+
+  if (!fs.existsSync(dirPath)) {
+    console.error('game.details::getLocalDirectoryHashAndSize: Directory does not exist:', dirPath);
+    throw new Error('Directory does not exist: ' + dirPath);
+  }
+
   try {
     return await getDirectoryHashAndSize(dirPath, execPromise);
   } catch (error) {

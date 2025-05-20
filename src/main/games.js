@@ -113,9 +113,11 @@ async function calculateHashAndSize(steamAppId, inGameItem) {
   try {
     const { errors, gameItem } = await adjustedGameWithLocalAndRemoteDetails(inGameItem);
 
+    const updatedGameItem = updateGameItemState(steamAppId, gameItem);
+
     return {
       status: 'success',
-      gameItem: gameItem,
+      gameItem: updatedGameItem,
       error: {
         message: errors.length ? 'Errors calculating hash and size' : '',
         errors: errors,
