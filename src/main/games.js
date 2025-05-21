@@ -6,9 +6,10 @@ import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
 import { setGamesMapState, updateGameItemState } from './app.state';
+import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
 import { adjustedGameWithLocalAndRemoteDetails, getGameAndPrefixPath, getLocalDirectoryHashAndSize, getRemoteDirectoryHashAndSize } from './game.details';
-import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
+import { getDownloadDetails } from './game.download';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -333,7 +334,6 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
     };
   }
 
-  console.log('games::uploadGameToRemote: Game state updated to UPLOADING');
   console.log('games::uploadGameToRemote: Launcher:', gameItem.launcher);
   console.log('games::uploadGameToRemote: Prefix location:', gameItem.prefixLocation);
 
@@ -610,10 +610,50 @@ async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
   };
 }
 
+async function requestDownloadDetails(steamAppId, gameItem) {
+  if (!gameItem) {
+    console.error('games::requestDownloadDetails: Game item is not specified');
+    return {
+      status: 'error',
+      error: {
+        message: 'Game item is not specified',
+      },
+    };
+  }
+
+  if (!gameItem.prefixLocation) {
+    console.error('games::requestDownloadDetails: Game item prefix location is not specified');
+    return {
+      status: 'success',
+      downloadDetails: {
+        prefixes: [],
+      },
+    };
+  }
+
+  try {
+    console.log('games::requestDownloadDetails: Requesting download details for game: ' + steamAppId);
+    const downloadDetails = await getDownloadDetails(steamAppId, gameItem);
+
+    return {
+      status: 'success',
+      downloadDetails: downloadDetails,
+    };
+  } catch (error) {
+    console.error('games::requestDownloadDetails: Error requesting download details:', error);
+    return {
+      status: 'error',
+      error: {
+        message: 'Failed to request download details: ' + error,
+      },
+    };
+  }
+}
+
 function augmentOutputWithProgressId(output, steamAppId) {
   output.progressId = `steamAppId-${steamAppId}`;
 
   return output;
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal };
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal, requestDownloadDetails };

@@ -26,9 +26,10 @@ const gamesAPI = {
   uploadIcon: (steamAppId, filePath) => electronAPI.ipcRenderer.invoke('games/icon/upload', steamAppId, filePath),
   saveGameItem: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/save', steamAppId, gameItem),
   uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
-  abortGameUpload: (itemId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', itemId),
+  abortGameUpload: (steamAppId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', steamAppId),
   refreshHashAndSize: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/refresh_hash_and_size', steamAppId, gameItem),
-  deleteGameFromLocal: (itemId, gameItem, deletePrefix) => electronAPI.ipcRenderer.invoke('games/item/delete_from_local', itemId, gameItem, deletePrefix),
+  deleteGameFromLocal: (steamAppId, gameItem, deletePrefix) => electronAPI.ipcRenderer.invoke('games/item/delete_from_local', steamAppId, gameItem, deletePrefix),
+  requestDownloadDetails: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/request_download_details', steamAppId, gameItem),
   subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
 };
 

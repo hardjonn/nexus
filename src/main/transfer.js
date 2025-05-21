@@ -177,4 +177,46 @@ async function makeDirectoryOnRemote(host, username, privateKeyPath, remoteDirPa
   }
 }
 
-export { uploadWithRsync, abortRsyncTransferByItemId };
+async function getListOfPrefixesOnRemote(host, username, privateKeyPath, prefixesBasePath, prefixLocation) {
+  const ssh = new NodeSSH();
+
+  try {
+    console.log(`transfer::getListOfPrefixesOnRemote: Connecting to ${host}...`);
+    await ssh.connect({
+      host: host,
+      username: username,
+      privateKeyPath: privateKeyPath,
+    });
+
+    const escapedPrefixesBasePath = `'${prefixesBasePath.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
+    const escapedPrefixLocation = `'${prefixLocation.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
+
+    const listDirCommand = `sh -c "find ${escapedPrefixesBasePath} -type d -iname ${escapedPrefixLocation}"`;
+
+    console.log('transfer::getListOfPrefixesOnRemote: LISTDIR Command:', listDirCommand);
+
+    const result = await ssh.execCommand(listDirCommand);
+
+    console.log('transfer::getListOfPrefixesOnRemote: LISTDIR Result:', result);
+
+    if (!result.stdout) {
+      return [];
+    }
+
+    const stdOutLines = result.stdout.split('\n');
+
+    console.log('transfer::getListOfPrefixesOnRemote: STDOUT Lines:', stdOutLines);
+
+    return stdOutLines;
+  } catch (error) {
+    console.error('transfer::getListOfPrefixesOnRemote: Error listing remote folders:', error);
+    throw error; // Re-throw the error for upstream handling
+  } finally {
+    if (ssh.connection) {
+      console.log('transfer::getListOfPrefixesOnRemote: Disconnecting SSH session.');
+      ssh.dispose();
+    }
+  }
+}
+
+export { uploadWithRsync, abortRsyncTransferByItemId, getListOfPrefixesOnRemote };

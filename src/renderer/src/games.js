@@ -26,4 +26,8 @@ function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
   return window.gamesAPI.deleteGameFromLocal(steamAppId, gameItem, deletePrefix);
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal };
+function requestDownloadDetails(steamAppId, gameItem) {
+  return window.gamesAPI.requestDownloadDetails(steamAppId, gameItem);
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal, requestDownloadDetails };

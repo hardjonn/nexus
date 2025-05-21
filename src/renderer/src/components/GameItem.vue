@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, toRaw, watch } from 'vue';
 const { webUtils } = require('electron');
-import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal } from '../games.js';
+import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal, requestDownloadDetails } from '../games.js';
 
 const processingActions = {
   uploadingIcon: 'Uploading icon...',
@@ -12,6 +12,9 @@ const processingActions = {
   refreshingHashAndSize: 'Refreshing hash and size...',
   initGameDeletion: 'Initiating game deletion...',
   deletingGameFromLocal: 'Deleting game from local...',
+  initGameDownload: 'Initiating game download...',
+  downloadingGameFromRemote: 'Downloading game from remote...',
+  requestingDownloadDetails: 'Requesting download details...',
 };
 
 const props = defineProps({
@@ -314,6 +317,10 @@ const shouldShowDeleteGameFromLocalButton = computed(() => {
   return true;
 });
 
+const shouldShowDownloadGameButton = computed(() => {
+  return true;
+});
+
 function activateProcessingAction(action) {
   data.processingAction = action;
 
@@ -562,6 +569,46 @@ async function onActionConfirmGameDeletion() {
   }
 }
 
+async function onActionInitGameDownload() {
+  activateProcessingAction(processingActions.initGameDownload);
+}
+
+async function onActionCancelGameDownload() {
+  data.processingAction = null;
+}
+
+async function onActionRequestDownloadDetails() {
+  activateProcessingAction(processingActions.requestingDownloadDetails);
+
+  const rawGameItem = makeRawGameItem();
+
+  try {
+    const response = await requestDownloadDetails(data.gameItem.steamAppId, rawGameItem);
+
+    console.log('Request Download Details Response:', response);
+
+    if (!response) {
+      data.errorMessage = 'Something went wrong while requesting the download details.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while requesting the download details.';
+      data.errors = response.error.errors;
+      return;
+    }
+
+    data.successMessage = 'Download details requested successfully!';
+    onActionInitGameDownload();
+  } catch (error) {
+    console.error('Error requesting download details:', error);
+    data.errorMessage = 'An error occurred while requesting the download details: ' + error.message;
+    data.processingAction = null;
+  }
+}
+
+async function onActionConfirmGameDownload() {}
+
 function makeRawGameItem() {
   const rawGameItem = toRaw(data.gameItem);
 
@@ -713,7 +760,7 @@ function makeRawGameItem() {
         <button
           v-if="shouldShowDeleteGameFromLocalButton"
           type="button"
-          class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
           @click="onActionInitGameDeletion"
         >
           Delete Game From Local
@@ -722,9 +769,19 @@ function makeRawGameItem() {
         <button
           v-if="isProcessingAction(processingActions.deletingGameFromLocal)"
           type="button"
-          class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
         >
           Deleting Game From Local...
+        </button>
+
+        <button
+          v-if="shouldShowDownloadGameButton"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br dark:focus:ring-blue-800 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+          :disabled="isProcessingAction(processingActions.requestingDownloadDetails)"
+          @click="onActionRequestDownloadDetails"
+        >
+          {{ isProcessingAction(processingActions.requestingDownloadDetails) ? 'Requesting Download Details...' : 'Download Game' }}
         </button>
       </div>
     </div>
