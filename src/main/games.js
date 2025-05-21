@@ -534,10 +534,86 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   }
 }
 
+async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
+  const errors = [];
+
+  if (!gameItem) {
+    console.error('games::deleteGameFromLocal: Game item is not specified');
+    return {
+      status: 'error',
+      error: {
+        message: 'Game item is not specified',
+      },
+    };
+  }
+
+  try {
+    console.log('games::deleteGameFromLocal: Deleting game from local...');
+
+    if (!fs.existsSync(gameItem.realLocalGamePath)) {
+      console.error('games::deleteGameFromLocal: Game item real local game path does not exist');
+      errors.push('Game item real local game path does not exist: ' + gameItem.realLocalGamePath);
+    } else {
+      console.log('games::deleteGameFromLocal: Deleting game item: ' + gameItem.realLocalGamePath);
+      fs.rmSync(gameItem.realLocalGamePath, { recursive: true });
+    }
+
+    gameItem.realLocalGamePath = null;
+    gameItem.localGameHash = null;
+    gameItem.localGameSizeInBytes = 0;
+  } catch (error) {
+    console.error('games::deleteGameFromLocal: Error deleting game from local:', error);
+    errors.push('Failed to delete game from local: ' + error);
+  }
+
+  if (!deletePrefix) {
+    return {
+      status: 'success',
+      message: 'Game deleted successfully',
+      gameItem: gameItem,
+      error: {
+        message: errors.length ? 'There were some errors while deleting the game' : null,
+        errors: errors,
+      },
+    };
+  }
+
+  try {
+    console.log('games::deleteGameFromLocal: Deleting prefix...');
+
+    if (!fs.existsSync(gameItem.realLocalPrefixPath)) {
+      console.error('games::deleteGameFromLocal: Game item real local prefix path does not exist');
+      errors.push('Game item real local prefix path does not exist: ' + gameItem.realLocalPrefixPath);
+    } else {
+      console.log('games::deleteGameFromLocal: Deleting prefix: ' + gameItem.realLocalPrefixPath);
+      fs.rmSync(gameItem.realLocalPrefixPath, { recursive: true });
+    }
+
+    gameItem.realLocalPrefixPath = null;
+    gameItem.localPrefixHash = null;
+    gameItem.localPrefixSizeInBytes = 0;
+  } catch (error) {
+    console.error('games::deleteGameFromLocal: Error deleting prefix:', error);
+    errors.push('Failed to delete prefix: ' + error);
+  }
+
+  gameItem = updateGameItemState(gameItem.steamAppId, gameItem);
+
+  return {
+    status: 'success',
+    message: 'Game deleted successfully',
+    gameItem: gameItem,
+    error: {
+      message: errors.length ? 'There were some errors while deleting the game' : null,
+      errors: errors,
+    },
+  };
+}
+
 function augmentOutputWithProgressId(output, steamAppId) {
   output.progressId = `steamAppId-${steamAppId}`;
 
   return output;
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize };
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal };

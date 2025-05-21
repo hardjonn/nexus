@@ -23,6 +23,9 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
   const errors = [];
   const config = getConfig();
 
+  game.realLocalGamePath = getRealLocalGamePath(game.gameLocation);
+  game.realLocalPrefixPath = getRealLocalPrefixPath(game.prefixLocation);
+
   console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Local game path:', game.realLocalGamePath);
 
   try {
@@ -35,6 +38,8 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     game.localGameSizeInBytes = localSizeInBytes;
   } catch (error) {
     console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting local directory hash and size:', error);
+    game.localGameHash = null;
+    game.localGameSizeInBytes = 0;
     errors.push(`Error getting local directory hash and size: ${error.message}`);
   }
 
@@ -50,6 +55,8 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     game.remoteGameSizeInBytes = remoteSizeInBytes;
   } catch (error) {
     console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting remote directory hash and size:', error);
+    game.remoteGameHash = null;
+    game.remoteGameSizeInBytes = 0;
     errors.push(`Error getting remote directory hash and size: ${error.message}`);
   }
 
@@ -64,15 +71,15 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
   }
 
   try {
-    const localPrefixPath = path.join(config.local_lib.prefixes_path, game.prefixLocation);
-    console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Local Prefix Path:', localPrefixPath);
-    game.realLocalPrefixPath = localPrefixPath;
+    console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Local Prefix Path:', game.realLocalPrefixPath);
 
-    const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(localPrefixPath);
+    const { hash: localPrefixHash, sizeInBytes: localPrefixSizeInBytes } = await getLocalDirectoryHashAndSize(game.realLocalPrefixPath);
     game.localPrefixHash = localPrefixHash;
     game.localPrefixSizeInBytes = localPrefixSizeInBytes;
   } catch (error) {
     console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting local prefix hash and size:', error);
+    game.localPrefixHash = null;
+    game.localPrefixSizeInBytes = 0;
     errors.push(`Error getting local prefix hash and size: ${error.message}`);
   }
 
@@ -88,6 +95,8 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
     game.remotePrefixSizeInBytes = remotePrefixSizeInBytes;
   } catch (error) {
     console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting remote initial prefix hash and size:', error);
+    game.remotePrefixHash = null;
+    game.remotePrefixSizeInBytes = 0;
     errors.push(`Error getting remote initial prefix hash and size: ${error.message}`);
   }
 

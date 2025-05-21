@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, toRaw, watch } from 'vue';
 const { webUtils } = require('electron');
-import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize } from '../games.js';
+import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal } from '../games.js';
 
 const processingActions = {
   uploadingIcon: 'Uploading icon...',
@@ -11,6 +11,7 @@ const processingActions = {
   abortingGameUpload: 'Aborting game upload...',
   refreshingHashAndSize: 'Refreshing hash and size...',
   initGameDeletion: 'Initiating game deletion...',
+  deletingGameFromLocal: 'Deleting game from local...',
 };
 
 const props = defineProps({
@@ -226,6 +227,10 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
+  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
+    return false;
+  }
+
   return true;
 });
 
@@ -247,6 +252,14 @@ const shouldShowRefreshHashAndSizeButton = computed(() => {
   }
 
   if (isProcessingAction(processingActions.uploadingGameToRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.initGameDeletion)) {
     return false;
   }
 
@@ -282,11 +295,19 @@ const shouldShowDeleteGameFromLocalButton = computed(() => {
     return false;
   }
 
-  if (!data.gameItem.realLocalGamePath) {
+  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
     return false;
   }
 
   if (data.gameItem.localState.isDownloading) {
+    return false;
+  }
+
+  if (data.gameItem.realLocalPrefixPath && data.gameItem.launcher === 'PORT_PROTON') {
+    return true;
+  }
+
+  if (!data.gameItem.realLocalGamePath) {
     return false;
   }
 
@@ -507,6 +528,38 @@ async function onActionCancelGameDeletion() {
 
 async function onActionConfirmGameDeletion() {
   console.log('Confirming game deletion with prefix deletion:', data.deletePrefix);
+
+  activateProcessingAction(processingActions.deletingGameFromLocal);
+
+  const rawGameItem = makeRawGameItem();
+
+  try {
+    const response = await deleteGameFromLocal(data.gameItem.steamAppId, rawGameItem, data.deletePrefix);
+
+    console.log('Delete Game From Local Response:', response);
+
+    if (!response) {
+      data.errorMessage = 'Something went wrong while deleting the game from local.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while deleting the game from local.';
+      data.errors = response.error.errors;
+      return;
+    }
+
+    data.successMessage = 'Game deleted successfully!';
+    data.errorMessage = response.error.message;
+    data.errors = response.error.errors;
+
+    emit('update-game-item', response.gameItem);
+  } catch (error) {
+    console.error('Error deleting the game from local:', error);
+    data.errorMessage = 'An error occurred while deleting the game from local: ' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
 }
 
 function makeRawGameItem() {
@@ -665,6 +718,14 @@ function makeRawGameItem() {
         >
           Delete Game From Local
         </button>
+
+        <button
+          v-if="isProcessingAction(processingActions.deletingGameFromLocal)"
+          type="button"
+          class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+        >
+          Deleting Game From Local...
+        </button>
       </div>
     </div>
 
@@ -682,7 +743,7 @@ function makeRawGameItem() {
             <p>No worries, it can re-downloaded again</p>
           </div>
 
-          <div v-if="data.gameItem.launcher === 'PORT_PROTON'" class="grid w-full md:grid-cols-2">
+          <div v-if="data.gameItem.realLocalPrefixPath && data.gameItem.launcher === 'PORT_PROTON'" class="grid w-full md:grid-cols-2">
             <input id="delete-prefix" v-model="data.deletePrefix" type="checkbox" class="hidden peer" />
             <label
               for="delete-prefix"
@@ -708,7 +769,7 @@ function makeRawGameItem() {
             <div class="grid w-full md:grid-cols-2 gap-12">
               <button
                 type="button"
-                class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br dark:focus:ring-blue-800 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+                class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
                 @click="onActionConfirmGameDeletion"
               >
                 Delete
@@ -716,7 +777,7 @@ function makeRawGameItem() {
 
               <button
                 type="button"
-                class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-red-800 shadow-lg dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+                class="text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br dark:focus:ring-blue-800 dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
                 @click="onActionCancelGameDeletion"
               >
                 Cancel

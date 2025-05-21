@@ -28,6 +28,7 @@ const gamesAPI = {
   uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
   abortGameUpload: (itemId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', itemId),
   refreshHashAndSize: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/refresh_hash_and_size', steamAppId, gameItem),
+  deleteGameFromLocal: (itemId, gameItem, deletePrefix) => electronAPI.ipcRenderer.invoke('games/item/delete_from_local', itemId, gameItem, deletePrefix),
   subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
 };
 

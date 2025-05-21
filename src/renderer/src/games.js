@@ -22,4 +22,8 @@ function refreshHashAndSize(steamAppId, gameItem) {
   return window.gamesAPI.refreshHashAndSize(steamAppId, gameItem);
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize };
+function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
+  return window.gamesAPI.deleteGameFromLocal(steamAppId, gameItem, deletePrefix);
+}
+
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal };

@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
-import { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize } from './games';
+import { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal } from './games';
 
 let progressCallback = null;
 
@@ -157,4 +157,9 @@ ipcMain.handle('games/item/abort_rsync_transfer', async (event, itemId) => {
 ipcMain.handle('games/item/refresh_hash_and_size', async (event, steamAppId, gameItem) => {
   console.log('games/item/refresh_hash_and_size', steamAppId, gameItem);
   return await calculateHashAndSize(steamAppId, gameItem);
+});
+
+ipcMain.handle('games/item/delete_from_local', async (event, itemId, gameItem, deletePrefix) => {
+  console.log('games/item/delete_from_local', itemId, gameItem);
+  return await deleteGameFromLocal(itemId, gameItem, deletePrefix);
 });
