@@ -1,3 +1,5 @@
+import path from 'path';
+
 const { spawn } = require('child_process');
 const { NodeSSH } = require('node-ssh');
 const AbortController = require('abort-controller');
@@ -204,10 +206,17 @@ async function getListOfPrefixesOnRemote(host, username, privateKeyPath, prefixe
     }
 
     const stdOutLines = result.stdout.split('\n');
+    const aliasPrefixesList = [];
 
-    console.log('transfer::getListOfPrefixesOnRemote: STDOUT Lines:', stdOutLines);
+    stdOutLines.forEach((line) => {
+      const pathWithoutPrefixesBasePath = line.replace(prefixesBasePath, '');
+      const alias = path.dirname(pathWithoutPrefixesBasePath).replace(path.sep, '');
+      aliasPrefixesList.push({ alias, path: line });
+    });
 
-    return stdOutLines;
+    console.log('transfer::getListOfPrefixesOnRemote: Alias Prefix List:', aliasPrefixesList);
+
+    return aliasPrefixesList;
   } catch (error) {
     console.error('transfer::getListOfPrefixesOnRemote: Error listing remote folders:', error);
     throw error; // Re-throw the error for upstream handling

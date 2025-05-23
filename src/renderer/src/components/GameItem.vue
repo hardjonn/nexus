@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, toRaw, watch } from 'vue';
+import { computed, reactive, toRaw, watch, ref } from 'vue';
 const { webUtils } = require('electron');
 import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal, requestDownloadDetails } from '../games.js';
 
@@ -50,10 +50,13 @@ const data = reactive({
   showProgressContent: false,
 
   deletePrefix: false,
+  availablePrefixes: [],
 
   gameItem: { ...props.gameItem },
   progress: props.progress,
 });
+
+const prefixSelected = ref('NONE');
 
 watch(
   () => props.gameItem,
@@ -579,6 +582,7 @@ async function onActionCancelGameDownload() {
 
 async function onActionRequestDownloadDetails() {
   activateProcessingAction(processingActions.requestingDownloadDetails);
+  data.availablePrefixes = [];
 
   const rawGameItem = makeRawGameItem();
 
@@ -599,6 +603,7 @@ async function onActionRequestDownloadDetails() {
     }
 
     data.successMessage = 'Download details requested successfully!';
+    data.availablePrefixes = response.downloadDetails.prefixes;
     onActionInitGameDownload();
   } catch (error) {
     console.error('Error requesting download details:', error);
@@ -790,6 +795,105 @@ function makeRawGameItem() {
       <div v-if="data.showProgressContent && data.progressContent" class="absolute top-2 left-2 right-2 bottom-2 dark:bg-gray-700 dark:text-gray-400">
         <div class="p-4 w-full h-full overflow-auto">
           <pre v-html="data.progressContent"></pre>
+        </div>
+      </div>
+
+      <div v-if="isProcessingAction(processingActions.initGameDownload)" class="absolute top-2 left-2 right-2 bottom-2 dark:bg-gray-700 dark:text-gray-400 opacity-98">
+        <div class="p-4 w-full h-full overflow-auto">
+          <div v-if="data.availablePrefixes.length > 0" class="p-2 mb-2">
+            <h3 class="text-lg font-semibold mb-4">Please select a prefix to download with the game</h3>
+
+            <ul class="grid w-full gap-6 md:grid-cols-3">
+              <li>
+                <input
+                  :id="'prefix-none-' + data.gameItem.steamAppId"
+                  v-model="prefixSelected"
+                  value="NONE"
+                  checked
+                  type="radio"
+                  name="prefix-selected"
+                  class="hidden peer"
+                  required
+                />
+                <label
+                  :for="'prefix-none-' + data.gameItem.steamAppId"
+                  class="inline-flex items-center justify-between w-full h-full p-5 border-4 border-gray-200 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-blue-500 dark:peer-checked:border-blue-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900"
+                >
+                  <div class="block">
+                    <div class="w-full text-lg font-semibold inline-flex items-center justify-between">
+                      None
+                      <svg
+                        v-if="prefixSelected === 'NONE'"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-6"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </div>
+                    <div class="w-full">Prefix will not be downloaded</div>
+                  </div>
+                </label>
+              </li>
+
+              <li v-for="prefix in data.availablePrefixes" :key="prefix.alias">
+                <input
+                  :id="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
+                  v-model="prefixSelected"
+                  :value="prefix.alias"
+                  type="radio"
+                  name="prefix-selected"
+                  class="hidden peer"
+                  required
+                />
+                <label
+                  :for="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
+                  class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 border-gray-200 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-blue-500 dark:peer-checked:border-blue-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900"
+                >
+                  <div class="block">
+                    <div class="w-full text-lg font-semibold inline-flex items-center justify-between">
+                      {{ prefix.alias }}
+                      <svg
+                        v-if="prefixSelected === prefix.alias"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-6"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </div>
+                    <div class="w-full">{{ prefix.path }}</div>
+                  </div>
+                </label>
+              </li>
+            </ul>
+          </div>
+
+          <div class="grid w-full md:grid-cols-2 mt-4">
+            <div class="grid w-full md:grid-cols-2 gap-12">
+              <button
+                type="button"
+                class="text-white bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 hover:bg-gradient-to-br dark:focus:ring-blue-800 shadow-lg dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+                @click="onActionConfirmGameDownload"
+              >
+                Start Download
+              </button>
+
+              <button
+                type="button"
+                class="text-white bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:bg-gradient-to-br dark:focus:ring-red-800 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+                @click="onActionCancelGameDownload"
+              >
+                Cancel Download
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
