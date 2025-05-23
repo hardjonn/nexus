@@ -176,7 +176,7 @@ async function createOrUpdateGameItem(steamAppId, gameItem) {
   // we do it when the game is uploaded to the remote
   if (gameItem.source === 'steam') {
     // if it's a steam game then icon was loaded from a local path or it's empty
-    // so we need to convert it to a 256x256 JPG
+    // so we need to convert it to a 192x192 JPG
     gameItem.icon = await makeIconFromLoadedSteamIcon(gameItem.icon);
     return await db_createGameItemFromSteamData(steamAppId, gameItem);
   }

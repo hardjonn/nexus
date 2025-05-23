@@ -44,8 +44,8 @@ async function makeIconFromPath(iconPath) {
     }
 
     const image = await Jimp.read(iconPath);
-    // we need to convert image to a 256x256 JPG
-    const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
+    // we need to convert image to a 96x96 JPG
+    const resizedImage = await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 });
     console.log('game.icon::makeIconFromPath: Resized image buffer:', resizedImage.length);
 
     return resizedImage;
@@ -65,8 +65,8 @@ async function makeIconFromLoadedSteamIcon(icon) {
     const iconBuffer = Buffer.from(icon, 'base64');
     const image = await Jimp.fromBuffer(iconBuffer);
 
-    // we need to convert image to a 256x256 JPG
-    const resizedImage = await image.resize({ w: 256 }).getBuffer('image/jpeg');
+    // we need to convert image to a 96x96 JPG
+    const resizedImage = await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 });
     return resizedImage;
   } catch (error) {
     console.error('game.icon::makeIconFromLoadedSteamIcon: Error making icon from loaded steam icon:', error);
