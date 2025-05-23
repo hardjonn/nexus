@@ -20,7 +20,7 @@ const defaultConfig = {
     private_key_path: '/home/deck/.ssh/spb_truenas_nexus',
     games_path: 'Nexus/Games',
     prefixes_path: 'Nexus/Prefixes',
-    initial_prefixes: 'initial',
+    default_prefixes: 'default',
   },
   local_lib: {
     games_path: 'Games',
@@ -109,9 +109,9 @@ const schema = {
           type: 'string',
           default: 'Nexus/Prefixes',
         },
-        initial_prefixes: {
+        default_prefixes: {
           type: 'string',
-          default: 'initial',
+          default: 'default',
         },
       },
     },

@@ -84,20 +84,20 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
   }
 
   try {
-    const remotePrefixPath = path.join(config.remote_lib.prefixes_path, 'initial', game.prefixLocation);
+    const remotePrefixPath = path.join(config.remote_lib.prefixes_path, config.remote_lib.default_prefixes, game.prefixLocation);
     console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Prefix Path:', remotePrefixPath);
 
     const { hash: remotePrefixHash, sizeInBytes: remotePrefixSizeInBytes } = await getRemoteDirectoryHashAndSize(config, remotePrefixPath);
-    console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Initial Prefix Hash:', remotePrefixHash);
-    console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Initial Prefix Size:', remotePrefixSizeInBytes);
+    console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Default Prefix Hash:', remotePrefixHash);
+    console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Remote Default Prefix Size:', remotePrefixSizeInBytes);
 
     game.remotePrefixHash = remotePrefixHash;
     game.remotePrefixSizeInBytes = remotePrefixSizeInBytes;
   } catch (error) {
-    console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting remote initial prefix hash and size:', error);
+    console.error('game.details::adjustedGameWithLocalAndRemoteDetails: Error getting remote default prefix hash and size:', error);
     game.remotePrefixHash = null;
     game.remotePrefixSizeInBytes = 0;
-    errors.push(`Error getting remote initial prefix hash and size: ${error.message}`);
+    errors.push(`Error getting remote default prefix hash and size: ${error.message}`);
   }
 
   return {
@@ -295,7 +295,7 @@ function getGameAndPrefixPath(gameItem) {
   const remoteGamePath = path.join(config.remote_lib.games_path, gameItem.gameLocation);
 
   const localPrefixPath = gameItem.realLocalPrefixPath;
-  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.remote_lib.prefixes_path, config.remote_lib.initial_prefixes, gameItem.prefixLocation) : null;
+  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.remote_lib.prefixes_path, config.remote_lib.default_prefixes, gameItem.prefixLocation) : null;
 
   return {
     localGamePath: localGamePath,

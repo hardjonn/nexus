@@ -1020,10 +1020,10 @@ function makeRawGameItem() {
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
-        <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Hash (Initial):</span>
+        <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Hash (Default):</span>
         <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.prefixHash }}</span>
 
-        <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Size (Initial):</span>
+        <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Size (Default):</span>
         <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.prefixSizeInBytes }} ({{ formattedSize(data.gameItem.prefixSizeInBytes) }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Hash (Current):</span>
@@ -1032,10 +1032,10 @@ function makeRawGameItem() {
         <span class="text-l font-bold tracking-tight dark:text-white">Local Size (Current):</span>
         <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.localPrefixSizeInBytes }} ({{ formattedSize(data.gameItem.localPrefixSizeInBytes) }})</span>
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash (Initial):</span>
+        <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash (Default):</span>
         <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.remotePrefixHash }}</span>
 
-        <span class="text-l font-bold tracking-tight dark:text-white">Remote Size (Initial):</span>
+        <span class="text-l font-bold tracking-tight dark:text-white">Remote Size (Default):</span>
         <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.remotePrefixSizeInBytes }} ({{ formattedSize(data.gameItem.remotePrefixSizeInBytes) }})</span>
       </div>
 

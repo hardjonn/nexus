@@ -14,7 +14,7 @@ import { getDownloadDetails } from './game.download';
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
 // ...
-// initial hash and size are coming from the local installation
+// default hash and size are coming from the local installation
 // and stored in the DB, it's needed to validate that the uploaded
 // to the library is fully performed, to make sure that the game
 // is not out of sync
@@ -298,7 +298,7 @@ async function abortRsyncTransfer(itemId) {
 }
 
 // the idea it that the game item is uploaded only once in the beginning
-// when it's created we also upload the initial prefix if needed (for PORT_PROTON)
+// when it's created we also upload the default prefix if needed (for PORT_PROTON)
 // after that the prefix is frozen and cannot be changed
 // unless it'e enforced by the user
 // the game is available for upload only when it's in DRAFT/UPDATING state
@@ -389,7 +389,7 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   try {
     // 2. upload the prefix if needed
     //  - the launcher has to be PORT_PROTON
-    //  - the remote initial prefix has to be empty - record in the DB should not exist
+    //  - the remote default prefix has to be empty - record in the DB should not exist
     if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash && localPrefixPath && remotePrefixPath) {
       console.log('games::uploadGameToRemote: Uploading prefix...');
 
