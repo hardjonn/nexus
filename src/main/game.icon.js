@@ -44,7 +44,7 @@ async function makeIconFromPath(iconPath) {
     }
 
     const image = await Jimp.read(iconPath);
-    // we need to convert image to a 96x96 JPG
+    // we need to convert image to a 192x192 JPG
     const resizedImage = await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 });
     console.log('game.icon::makeIconFromPath: Resized image buffer:', resizedImage.length);
 
@@ -65,7 +65,7 @@ async function makeIconFromLoadedSteamIcon(icon) {
     const iconBuffer = Buffer.from(icon, 'base64');
     const image = await Jimp.fromBuffer(iconBuffer);
 
-    // we need to convert image to a 96x96 JPG
+    // we need to convert image to a 192x192 JPG
     const resizedImage = await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 });
     return resizedImage;
   } catch (error) {
