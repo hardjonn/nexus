@@ -80,7 +80,7 @@ async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, use
       'ServerAliveInterval=10',
     ].join(' ');
 
-    const rsyncArguments = ['-avzh', '--info=progress2', '--safe-links', '-e', sshCommand, sourcePathWithTrailingSlash, destinationPathWithTrailingSlash];
+    const rsyncArguments = ['-avzh', '--delete', '--info=progress2', '--safe-links', '-e', sshCommand, sourcePathWithTrailingSlash, destinationPathWithTrailingSlash];
 
     const controller = new AbortController();
     abortControllers.set(abortId, controller);
@@ -200,7 +200,7 @@ async function downloadWithRsync({ abortId, sourcePath, destinationPath, host, u
       'ServerAliveInterval=10',
     ].join(' ');
 
-    const rsyncArguments = ['-avzh', '--info=progress2', '--safe-links', '-e', sshCommand, remotePathWithTrailingSlash, localPathWithTrailingSlash];
+    const rsyncArguments = ['-avzh', '--delete', '--info=progress2', '--safe-links', '-e', sshCommand, remotePathWithTrailingSlash, localPathWithTrailingSlash];
 
     const controller = new AbortController();
     abortControllers.set(abortId, controller);
