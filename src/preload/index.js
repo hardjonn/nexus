@@ -30,6 +30,9 @@ const gamesAPI = {
   refreshHashAndSize: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/refresh_hash_and_size', steamAppId, gameItem),
   deleteGameFromLocal: (steamAppId, gameItem, deletePrefix) => electronAPI.ipcRenderer.invoke('games/item/delete_from_local', steamAppId, gameItem, deletePrefix),
   requestDownloadDetails: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/request_download_details', steamAppId, gameItem),
+  downloadGameFromRemote: (steamAppId, gameItem, prefixAlias, libPath) =>
+    electronAPI.ipcRenderer.invoke('games/item/download_from_remote', steamAppId, gameItem, prefixAlias, libPath),
+  abortGameDownload: (steamAppId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', steamAppId),
   subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
 };
 

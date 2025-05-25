@@ -288,14 +288,14 @@ function getDirectoryHashAndSizeUsingNodeJs(dirPath) {
   return { hash: hash, sizeInBytes: totalSizeInBytes };
 }
 
-function getGameAndPrefixPath(gameItem) {
+function getGameAndPrefixPath(gameItem, prefixAlias) {
   const config = getConfig();
 
   const localGamePath = gameItem.realLocalGamePath;
   const remoteGamePath = path.join(config.remote_lib.games_path, gameItem.gameLocation);
 
   const localPrefixPath = gameItem.realLocalPrefixPath;
-  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.remote_lib.prefixes_path, config.remote_lib.default_prefixes, gameItem.prefixLocation) : null;
+  const remotePrefixPath = gameItem.prefixLocation ? path.join(config.remote_lib.prefixes_path, prefixAlias, gameItem.prefixLocation) : null;
 
   return {
     localGamePath: localGamePath,

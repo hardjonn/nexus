@@ -30,4 +30,23 @@ function requestDownloadDetails(steamAppId, gameItem) {
   return window.gamesAPI.requestDownloadDetails(steamAppId, gameItem);
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal, requestDownloadDetails };
+function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath) {
+  return window.gamesAPI.downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath);
+}
+
+function abortGameDownload(itemId) {
+  return window.gamesAPI.abortGameDownload(itemId);
+}
+
+export {
+  getGames,
+  uploadIcon,
+  saveGameItem,
+  uploadGameToRemote,
+  abortGameUpload,
+  refreshHashAndSize,
+  deleteGameFromLocal,
+  requestDownloadDetails,
+  downloadGameFromRemote,
+  abortGameDownload,
+};

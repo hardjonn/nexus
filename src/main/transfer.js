@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs-extra';
 
 const { spawn } = require('child_process');
 const { NodeSSH } = require('node-ssh');
@@ -150,6 +151,91 @@ function processedRsyncOutput(output) {
   };
 }
 
+/**
+ * Downloads a remote directory to a local host using rsync over SSH with a private key.
+ * @param {Object} options
+ * @param {string} options.sourcePath - Path to the remote directory.
+ * @param {string} options.destinationPath - Destination path on local host.
+ * @param {string} options.username - Remote SSH username.
+ * @param {string} options.host - Remote host (IP or domain).
+ * @param {string} [options.privateKeyPath] - Path to the private SSH key.
+ * @param {function(string, number): void} [options.onProgress] - Optional callback for progress updates with percentage.
+ * @returns {Promise<void>}
+ */
+async function downloadWithRsync({ abortId, sourcePath, destinationPath, host, username, privateKeyPath, onProgress }) {
+  // source path is the remote path
+  // destination path is the local path
+
+  try {
+    console.log('transfer::downloadWithRsync: Making local folder: ', destinationPath);
+    await makeDirectoryOnLocal(destinationPath);
+  } catch (error) {
+    console.error('transfer::downloadWithRsync: Error making local folder:', error);
+    throw error;
+  }
+
+  return new Promise((resolve, reject) => {
+    const remotePath = `${username}@${host}:${sourcePath}`;
+
+    const remotePathWithTrailingSlash = remotePath.endsWith('/') ? remotePath : remotePath + '/';
+    const localPathWithTrailingSlash = destinationPath.endsWith('/') ? destinationPath : destinationPath + '/';
+
+    console.log('transfer::downloadWithRsync: Destination path: ' + localPathWithTrailingSlash);
+    console.log('transfer::downloadWithRsync: Source path: ' + remotePathWithTrailingSlash);
+
+    const sshCommand = [
+      'ssh',
+      '-t',
+      '-i',
+      privateKeyPath,
+      '-o',
+      'LogLevel=QUIET',
+      '-o',
+      'UserKnownHostsFile=/dev/null',
+      '-o',
+      'StrictHostKeyChecking=no',
+      '-o',
+      'PasswordAuthentication=no',
+      '-o',
+      'ServerAliveInterval=10',
+    ].join(' ');
+
+    const rsyncArguments = ['-avzh', '--info=progress2', '--safe-links', '-e', sshCommand, remotePathWithTrailingSlash, localPathWithTrailingSlash];
+
+    const controller = new AbortController();
+    abortControllers.set(abortId, controller);
+    const { signal } = controller;
+
+    const rsync = spawn('rsync', rsyncArguments, { signal });
+
+    rsync.stdout.on('data', (data) => {
+      const processedOutput = processedRsyncOutput(data.toString());
+      if (onProgress) onProgress(processedOutput);
+    });
+
+    rsync.stderr.on('data', (data) => {
+      const processedOutput = processedRsyncOutput(data.toString());
+      if (onProgress) onProgress(processedOutput);
+    });
+
+    rsync.on('close', (code) => {
+      abortControllers.delete(abortId);
+
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`rsync exited with code ${code}`));
+      }
+    });
+
+    rsync.on('error', (err) => {
+      reject(err);
+    });
+
+    // add support for cancellation/aborting the upload
+  });
+}
+
 async function makeDirectoryOnRemote(host, username, privateKeyPath, remoteDirPath) {
   const ssh = new NodeSSH();
 
@@ -176,6 +262,21 @@ async function makeDirectoryOnRemote(host, username, privateKeyPath, remoteDirPa
       console.log('transfer::makeDirectoryOnRemote: Disconnecting SSH session.');
       ssh.dispose();
     }
+  }
+}
+
+async function makeDirectoryOnLocal(localDirPath) {
+  if (fs.existsSync(localDirPath)) {
+    console.log(`transfer::makeDirectoryOnLocal: Directory already exists: ${localDirPath}`);
+    return;
+  }
+
+  try {
+    console.log(`transfer::makeDirectoryOnLocal: Making local folder: ${localDirPath}`);
+    fs.mkdirSync(localDirPath, { recursive: true });
+  } catch (error) {
+    console.error('transfer::makeDirectoryOnLocal: Error making local folder:', error);
+    throw error; // Re-throw the error for upstream handling
   }
 }
 
@@ -228,4 +329,4 @@ async function getListOfPrefixesOnRemote(host, username, privateKeyPath, prefixe
   }
 }
 
-export { uploadWithRsync, abortRsyncTransferByItemId, getListOfPrefixesOnRemote };
+export { uploadWithRsync, abortRsyncTransferByItemId, getListOfPrefixesOnRemote, downloadWithRsync };

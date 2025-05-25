@@ -4,7 +4,17 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
-import { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal, requestDownloadDetails } from './games';
+import {
+  getGames,
+  uploadIcon,
+  saveGameItem,
+  uploadGameToRemote,
+  abortRsyncTransfer,
+  calculateHashAndSize,
+  deleteGameFromLocal,
+  requestDownloadDetails,
+  downloadGameFromRemote,
+} from './games';
 
 let progressCallback = null;
 
@@ -167,4 +177,9 @@ ipcMain.handle('games/item/delete_from_local', async (event, itemId, gameItem, d
 ipcMain.handle('games/item/request_download_details', async (event, steamAppId, gameItem) => {
   console.log('games/item/request_download_details', steamAppId, gameItem);
   return await requestDownloadDetails(steamAppId, gameItem);
+});
+
+ipcMain.handle('games/item/download_from_remote', async (event, steamAppId, gameItem, prefixAlias, libPath) => {
+  console.log('games/item/download_from_remote', steamAppId, gameItem, prefixAlias, libPath);
+  return await downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath, progressCallback);
 });

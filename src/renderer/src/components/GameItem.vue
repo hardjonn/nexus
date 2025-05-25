@@ -1,7 +1,18 @@
 <script setup>
 import { computed, reactive, toRaw, watch, ref } from 'vue';
+import path from 'node:path';
 const { webUtils } = require('electron');
-import { uploadIcon, saveGameItem, uploadGameToRemote, abortGameUpload, refreshHashAndSize, deleteGameFromLocal, requestDownloadDetails } from '../games.js';
+import {
+  uploadIcon,
+  saveGameItem,
+  uploadGameToRemote,
+  abortGameUpload,
+  refreshHashAndSize,
+  deleteGameFromLocal,
+  requestDownloadDetails,
+  downloadGameFromRemote,
+  abortGameDownload,
+} from '../games.js';
 
 const processingActions = {
   uploadingIcon: 'Uploading icon...',
@@ -15,6 +26,7 @@ const processingActions = {
   initGameDownload: 'Initiating game download...',
   downloadingGameFromRemote: 'Downloading game from remote...',
   requestingDownloadDetails: 'Requesting download details...',
+  abortingGameDownload: 'Aborting game download...',
 };
 
 const props = defineProps({
@@ -29,6 +41,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update-game-item']);
+
+const nonePrefix = {
+  alias: 'NONE',
+  path: 'Prefix will not be downloaded',
+};
 
 const data = reactive({
   processingAction: null,
@@ -50,13 +67,15 @@ const data = reactive({
   showProgressContent: false,
 
   deletePrefix: false,
-  availablePrefixes: [],
+  availablePrefixes: [nonePrefix],
+  availableLibs: [],
 
   gameItem: { ...props.gameItem },
   progress: props.progress,
 });
 
 const prefixSelected = ref('NONE');
+const libSelected = ref(null);
 
 watch(
   () => props.gameItem,
@@ -117,14 +136,21 @@ const prefixSizeClass = computed(() => {
   return prefixSizeMatch.value ? 'text-gray-400' : 'text-red-500';
 });
 
-function formattedSize(size) {
-  if (size < 1024) return `${size} B`;
+function formattedSize(size, base) {
+  let baseLiteralIndex = 0;
+  const sizeLiterals = ['B', 'KB', 'MB', 'GB', 'TB'];
 
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
+  if (base === 'KB') {
+    baseLiteralIndex = 1;
+  }
 
-  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  if (size < 1024) return `${size} ${sizeLiterals[baseLiteralIndex]}`;
 
-  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} ${sizeLiterals[baseLiteralIndex + 1]}`;
+
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} ${sizeLiterals[baseLiteralIndex + 2]}`;
+
+  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} ${sizeLiterals[baseLiteralIndex + 3]}`;
 }
 
 const isDownloading = computed(() => {
@@ -269,6 +295,18 @@ const shouldShowRefreshHashAndSizeButton = computed(() => {
     return false;
   }
 
+  if (isProcessingAction(processingActions.initGameDownload)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
+    return false;
+  }
+
   return true;
 });
 
@@ -302,6 +340,18 @@ const shouldShowDeleteGameFromLocalButton = computed(() => {
   }
 
   if (isProcessingAction(processingActions.deletingGameFromLocal)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.initGameDownload)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
     return false;
   }
 
@@ -582,7 +632,8 @@ async function onActionCancelGameDownload() {
 
 async function onActionRequestDownloadDetails() {
   activateProcessingAction(processingActions.requestingDownloadDetails);
-  data.availablePrefixes = [];
+  data.availablePrefixes = [nonePrefix];
+  data.availableLibs = [];
 
   const rawGameItem = makeRawGameItem();
 
@@ -603,7 +654,23 @@ async function onActionRequestDownloadDetails() {
     }
 
     data.successMessage = 'Download details requested successfully!';
-    data.availablePrefixes = response.downloadDetails.prefixes;
+    data.availablePrefixes = [nonePrefix, ...response.downloadDetails.prefixes];
+    data.availableLibs = response.downloadDetails.libs;
+
+    console.log('onActionRequestDownloadDetails: Available Libs:', data.availableLibs);
+
+    for (let i = 0; i < data.availableLibs.length; i++) {
+      const lib = data.availableLibs[i];
+
+      if (data.gameItem.realLocalGamePath && data.gameItem.realLocalGamePath.startsWith(lib.path)) {
+        libSelected.value = lib.path;
+      }
+    }
+
+    if (data.availableLibs.length === 0) {
+      throw new Error('No available libs found for download.');
+    }
+
     onActionInitGameDownload();
   } catch (error) {
     console.error('Error requesting download details:', error);
@@ -612,7 +679,68 @@ async function onActionRequestDownloadDetails() {
   }
 }
 
-async function onActionConfirmGameDownload() {}
+async function onActionConfirmGameDownload() {
+  activateProcessingAction(processingActions.downloadingGameFromRemote);
+
+  try {
+    const rawGameItem = makeRawGameItem();
+    console.log('Raw Game Item: ', rawGameItem);
+
+    const response = await downloadGameFromRemote(props.gameItem.steamAppId, rawGameItem, prefixSelected.value, libSelected.value);
+    console.log(response);
+
+    if (!response) {
+      data.errorMessage = 'Something went wrong while downloading the game from the remote.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while downloading the game from the remote.';
+      data.errors = response.error.errors;
+
+      if (response.gameItem) {
+        emit('update-game-item', response.gameItem);
+      }
+
+      return;
+    }
+
+    data.successMessage = 'Game downloaded successfully!';
+
+    emit('update-game-item', response.gameItem);
+  } catch (error) {
+    console.error('Error downloading the game from the remote:', error);
+    data.errorMessage = 'An error occurred while downloading the game from the remote:' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
+async function onActionAbortDownloadGameFromRemote() {
+  activateProcessingAction(processingActions.abortingGameDownload);
+
+  try {
+    const response = await abortGameDownload(props.gameItem.steamAppId);
+
+    if (!response) {
+      data.errorMessage = 'Something went wrong while canceling the download.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while canceling the download.';
+      data.errors = response.error.errors;
+      return;
+    }
+
+    data.successMessage = 'Game download canceled successfully!';
+  } catch (error) {
+    console.error('Error canceling the download:', error);
+    data.errorMessage = 'An error occurred while canceling the download:' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
 
 function makeRawGameItem() {
   const rawGameItem = toRaw(data.gameItem);
@@ -800,30 +928,29 @@ function makeRawGameItem() {
 
       <div v-if="isProcessingAction(processingActions.initGameDownload)" class="absolute top-2 left-2 right-2 bottom-2 dark:bg-gray-700 dark:text-gray-400 opacity-98">
         <div class="p-4 w-full h-full overflow-auto">
-          <div v-if="data.availablePrefixes.length > 0" class="p-2 mb-2">
-            <h3 class="text-lg font-semibold mb-4">Please select a prefix to download with the game</h3>
+          <div class="p-2 mb-2">
+            <h3 class="text-lg font-semibold mb-4">Please select a Library where the game will be downloaded to</h3>
 
-            <ul class="grid w-full gap-6 md:grid-cols-3">
-              <li>
+            <ul class="grid w-full gap-6 md:grid-cols-2">
+              <li v-for="lib in data.availableLibs" :key="lib.path">
                 <input
-                  :id="'prefix-none-' + data.gameItem.steamAppId"
-                  v-model="prefixSelected"
-                  value="NONE"
-                  checked
+                  :id="'lib-' + lib.path + '-' + data.gameItem.steamAppId"
+                  v-model="libSelected"
+                  :value="lib.path"
                   type="radio"
-                  name="prefix-selected"
+                  name="lib-selected"
                   class="hidden peer"
                   required
                 />
                 <label
-                  :for="'prefix-none-' + data.gameItem.steamAppId"
-                  class="inline-flex items-center justify-between w-full h-full p-5 border-4 border-gray-200 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-blue-500 dark:peer-checked:border-blue-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900"
+                  :for="'lib-' + lib.path + '-' + data.gameItem.steamAppId"
+                  class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-green-500 dark:peer-checked:border-green-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900 dark:hover:peer-checked:text-green-400"
                 >
                   <div class="block">
-                    <div class="w-full text-lg font-semibold inline-flex items-center justify-between">
-                      None
+                    <div class="w-full text-lg font-semibold inline-flex items-center justify-between mb-4">
+                      {{ lib.path }}
                       <svg
-                        v-if="prefixSelected === 'NONE'"
+                        v-if="libSelected === lib.path"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -834,11 +961,21 @@ function makeRawGameItem() {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                       </svg>
                     </div>
-                    <div class="w-full">Prefix will not be downloaded</div>
+                    <div class="w-full mb-4"><span class="font-semibold">Download Location:</span> {{ lib.downloadLocation }}</div>
+                    <div class="w-full"><span class="font-semibold">Disk Used:</span> {{ formattedSize(lib.diskInfo._used, 'KB') }}</div>
+                    <div class="w-full"><span class="font-semibold">Disk Available:</span> {{ formattedSize(lib.diskInfo._available, 'KB') }}</div>
+                    <div class="w-full"><span class="font-semibold">Disk Capacity:</span> {{ lib.diskInfo._capacity }}</div>
                   </div>
                 </label>
               </li>
+            </ul>
+          </div>
 
+          <div v-if="data.availablePrefixes.length > 1" class="p-2 mb-2">
+            <h3 class="text-lg font-semibold mb-4">Please select a prefix to download with the game</h3>
+            <h4 class="text-sm font-semibold mb-2">The Default prefix is the Initial one, it has no Saves</h4>
+
+            <ul class="grid w-full gap-6 md:grid-cols-3">
               <li v-for="prefix in data.availablePrefixes" :key="prefix.alias">
                 <input
                   :id="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
@@ -851,7 +988,10 @@ function makeRawGameItem() {
                 />
                 <label
                   :for="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
-                  class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 border-gray-200 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-blue-500 dark:peer-checked:border-blue-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900"
+                  class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-green-500 dark:peer-checked:border-green-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900 dark:hover:peer-checked:text-green-400"
+                  :class="{
+                    'dark:text-yellow-500 dark:peer-checked:text-yellow-600 dark:hover:text-yellow-600 dark:hover:peer-checked:text-yellow-600': prefix.alias === 'default',
+                  }"
                 >
                   <div class="block">
                     <div class="w-full text-lg font-semibold inline-flex items-center justify-between">
@@ -875,11 +1015,13 @@ function makeRawGameItem() {
             </ul>
           </div>
 
-          <div class="grid w-full md:grid-cols-2 mt-4">
-            <div class="grid w-full md:grid-cols-2 gap-12">
+          <div class="grid w-full md:grid-cols-6 gap-4 mt-4">
+            <div class="col-span-4 col-start-2 grid w-full md:grid-cols-2 gap-12">
               <button
                 type="button"
                 class="text-white bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 hover:bg-gradient-to-br dark:focus:ring-blue-800 shadow-lg dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+                :disabled="!libSelected"
+                :class="{ 'opacity-50 cursor-not-allowed from-gray-400 via-gray-500 to-gray-600': !libSelected }"
                 @click="onActionConfirmGameDownload"
               >
                 Start Download
@@ -972,7 +1114,7 @@ function makeRawGameItem() {
         >
       </div>
 
-      <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight dark:text-white">Game State:</span>
         <span class="font-normal dark:text-yellow-400">{{ gameState }}</span>
 
@@ -999,44 +1141,44 @@ function makeRawGameItem() {
         </ul>
       </div>
 
-      <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_30fr_20fr_28fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight dark:text-white">DB Hash:</span>
         <span class="font-normal" :class="hashClass">{{ data.gameItem.gameHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">DB Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.gameSizeInBytes }} ({{ formattedSize(data.gameItem.gameSizeInBytes) }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.gameSizeInBytes }} ({{ formattedSize(data.gameItem.gameSizeInBytes, 'B') }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Hash:</span>
         <span class="font-normal" :class="hashClass">{{ data.gameItem.localGameHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.localGameSizeInBytes }} ({{ formattedSize(data.gameItem.localGameSizeInBytes) }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.localGameSizeInBytes }} ({{ formattedSize(data.gameItem.localGameSizeInBytes, 'B') }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash:</span>
         <span class="font-normal" :class="hashClass">{{ data.gameItem.remoteGameHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Size:</span>
-        <span class="font-normal" :class="sizeClass">{{ data.gameItem.remoteGameSizeInBytes }} ({{ formattedSize(data.gameItem.remoteGameSizeInBytes) }})</span>
+        <span class="font-normal" :class="sizeClass">{{ data.gameItem.remoteGameSizeInBytes }} ({{ formattedSize(data.gameItem.remoteGameSizeInBytes, 'B') }})</span>
       </div>
 
-      <div class="grid mb-4 gap-2 grid-cols-[20fr_30fr_20fr_30fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_30fr_20fr_28fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Hash (Default):</span>
         <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.prefixHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">DB Prefix Size (Default):</span>
-        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.prefixSizeInBytes }} ({{ formattedSize(data.gameItem.prefixSizeInBytes) }})</span>
+        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.prefixSizeInBytes }} ({{ formattedSize(data.gameItem.prefixSizeInBytes, 'B') }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Hash (Current):</span>
         <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.localPrefixHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Local Size (Current):</span>
-        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.localPrefixSizeInBytes }} ({{ formattedSize(data.gameItem.localPrefixSizeInBytes) }})</span>
+        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.localPrefixSizeInBytes }} ({{ formattedSize(data.gameItem.localPrefixSizeInBytes, 'B') }})</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Hash (Default):</span>
         <span class="font-normal" :class="prefixHashClass">{{ data.gameItem.remotePrefixHash }}</span>
 
         <span class="text-l font-bold tracking-tight dark:text-white">Remote Size (Default):</span>
-        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.remotePrefixSizeInBytes }} ({{ formattedSize(data.gameItem.remotePrefixSizeInBytes) }})</span>
+        <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.remotePrefixSizeInBytes }} ({{ formattedSize(data.gameItem.remotePrefixSizeInBytes, 'B') }})</span>
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">

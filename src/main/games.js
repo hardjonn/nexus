@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData, db_updateGameState } from './game.queries';
 import { steam_getAllGamesMap } from './steam';
 import { getConfig } from './conf';
-import { uploadWithRsync, abortRsyncTransferByItemId } from './transfer';
+import { uploadWithRsync, abortRsyncTransferByItemId, downloadWithRsync } from './transfer';
 import { setGamesMapState, updateGameItemState } from './app.state';
 import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
@@ -350,7 +350,7 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
 
   const config = getConfig();
 
-  const { localGamePath, remoteGamePath, localPrefixPath, remotePrefixPath } = getGameAndPrefixPath(gameItem);
+  const { localGamePath, remoteGamePath, localPrefixPath, remotePrefixPath } = getGameAndPrefixPath(gameItem, config.remote_lib.default_prefixes);
 
   console.log('games::uploadGameToRemote: localGamePath: ' + localGamePath);
   console.log('games::uploadGameToRemote: remoteGamePath: ' + remoteGamePath);
@@ -534,6 +534,86 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   }
 }
 
+async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath, progressCallback) {
+  if (!steamAppId) {
+    console.error('games::downloadGameFromRemote: Steam app ID is not specified');
+    return {
+      status: 'error',
+      error: {
+        message: 'Steam app ID is not specified',
+      },
+    };
+  }
+
+  if (!gameItem) {
+    console.error('games::downloadGameFromRemote: Game item is not specified');
+    return {
+      status: 'error',
+      error: {
+        message: 'Game item is not specified',
+      },
+    };
+  }
+
+  if (!libPath) {
+    console.error('games::downloadGameFromRemote: Lib path is not specified');
+    return {
+      status: 'error',
+      error: {
+        message: 'Lib path is not specified',
+      },
+    };
+  }
+
+  console.log('games::downloadGameFromRemote: prefixAlias: ' + prefixAlias);
+  console.log('games::downloadGameFromRemote: libPath: ' + libPath);
+
+  const config = getConfig();
+
+  const { localGamePath, remoteGamePath, localPrefixPath, remotePrefixPath } = getGameAndPrefixPath(gameItem, prefixAlias);
+
+  console.log('games::downloadGameFromRemote: localGamePath: ' + localGamePath);
+  console.log('games::downloadGameFromRemote: remoteGamePath: ' + remoteGamePath);
+
+  console.log('games::downloadGameFromRemote: localPrefixPath: ' + localPrefixPath);
+  console.log('games::downloadGameFromRemote: remotePrefixPath: ' + remotePrefixPath);
+
+  return {
+    status: 'error',
+    error: {
+      message: 'Not implemented',
+    },
+  };
+
+  // try {
+  //   // 1. download the game from the remote
+  //   await downloadWithRsync({
+  //     abortId: steamAppId,
+  //     sourcePath: remoteGamePath,
+  //     destinationPath: localGamePath,
+  //     host: config.remote_lib.host,
+  //     username: config.remote_lib.user,
+  //     privateKeyPath: config.remote_lib.private_key_path,
+  //     onProgress: (output) => {
+  //       const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
+  //       progressCallback(augmentedWithSteamAppIdOutput);
+  //     },
+  //   });
+
+  //   console.log('games::downloadGameFromRemote: Download completed successfully!');
+  // } catch (error) {
+  //   console.error('games::downloadGameFromRemote: Download failed:', error);
+
+  //   return {
+  //     status: 'error',
+  //     gameItem: gameItem,
+  //     error: {
+  //       message: 'Failed to upload game to remote: ' + error,
+  //     },
+  //   };
+  // }
+}
+
 async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
   const errors = [];
 
@@ -621,16 +701,6 @@ async function requestDownloadDetails(steamAppId, gameItem) {
     };
   }
 
-  if (!gameItem.prefixLocation) {
-    console.error('games::requestDownloadDetails: Game item prefix location is not specified');
-    return {
-      status: 'success',
-      downloadDetails: {
-        prefixes: [],
-      },
-    };
-  }
-
   try {
     console.log('games::requestDownloadDetails: Requesting download details for game: ' + steamAppId);
     const downloadDetails = await getDownloadDetails(steamAppId, gameItem);
@@ -656,4 +726,4 @@ function augmentOutputWithProgressId(output, steamAppId) {
   return output;
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal, requestDownloadDetails };
+export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal, requestDownloadDetails, downloadGameFromRemote };
