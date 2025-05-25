@@ -371,6 +371,50 @@ const shouldShowDeleteGameFromLocalButton = computed(() => {
 });
 
 const shouldShowDownloadGameButton = computed(() => {
+  if (data.gameItem.source === 'steam') {
+    return false;
+  }
+
+  if (data.gameItem.status !== 'ACTIVE') {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.editingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.savingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.initGameDeletion)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.initGameDownload)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
+    return false;
+  }
+
   return true;
 });
 
@@ -635,6 +679,14 @@ async function onActionRequestDownloadDetails() {
   data.availablePrefixes = [nonePrefix];
   data.availableLibs = [];
 
+  // if the download is already in progress we cannot change the prefix or lib
+  if (data.gameItem.localState.downloading) {
+    libSelected.value = data.gameItem.localState.downloading.libPath;
+    prefixSelected.value = data.gameItem.localState.downloading.prefixAlias;
+    onActionInitGameDownload();
+    return;
+  }
+
   const rawGameItem = makeRawGameItem();
 
   try {
@@ -835,7 +887,16 @@ function makeRawGameItem() {
           Cancel Game Upload
         </button>
 
-        <div v-if="isProcessingAction(processingActions.uploadingGameToRemote) && data.progress">
+        <button
+          v-if="isProcessingAction(processingActions.downloadingGameFromRemote)"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br dark:focus:ring-cyan-800 shadow-lg dark:shadow-lg dark:shadow-cyan-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+          @click="onActionAbortDownloadGameFromRemote"
+        >
+          Cancel Game Download
+        </button>
+
+        <div v-if="data.progress && (isProcessingAction(processingActions.uploadingGameToRemote) || isProcessingAction(processingActions.downloadingGameFromRemote))">
           <div class="mt-2 mb-2 text-base font-medium text-center text-green-700 dark:text-green-500">{{ data.progress.transferred }} | {{ data.progress.speed }}</div>
           <div class="w-full h-4 mb-4 bg-gray-200 rounded-full dark:bg-gray-700">
             <div class="h-4 dark:bg-green-500 text-xs font-medium text-center p-0.5 leading-none rounded-full" :style="{ width: data.progress.percentage }">
@@ -928,91 +989,120 @@ function makeRawGameItem() {
 
       <div v-if="isProcessingAction(processingActions.initGameDownload)" class="absolute top-2 left-2 right-2 bottom-2 dark:bg-gray-700 dark:text-gray-400 opacity-98">
         <div class="p-4 w-full h-full overflow-auto">
-          <div class="p-2 mb-2">
-            <h3 class="text-lg font-semibold mb-4">Please select a Library where the game will be downloaded to</h3>
+          <div v-if="data.gameItem.localState.downloading">
+            <div class="p-2 mb-2">
+              <h3 class="text-lg font-semibold mb-4">Download initiated...</h3>
+              <h3 class="text-lg font-semibold mb-4">You can Resume the download or Delete Game from Local</h3>
 
-            <ul class="grid w-full gap-6 md:grid-cols-2">
-              <li v-for="lib in data.availableLibs" :key="lib.path">
-                <input
-                  :id="'lib-' + lib.path + '-' + data.gameItem.steamAppId"
-                  v-model="libSelected"
-                  :value="lib.path"
-                  type="radio"
-                  name="lib-selected"
-                  class="hidden peer"
-                  required
-                />
-                <label
-                  :for="'lib-' + lib.path + '-' + data.gameItem.steamAppId"
-                  class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-green-500 dark:peer-checked:border-green-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900 dark:hover:peer-checked:text-green-400"
-                >
-                  <div class="block">
-                    <div class="w-full text-lg font-semibold inline-flex items-center justify-between mb-4">
-                      {{ lib.path }}
-                      <svg
-                        v-if="libSelected === lib.path"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="size-6"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
-                    </div>
-                    <div class="w-full mb-4"><span class="font-semibold">Download Location:</span> {{ lib.downloadLocation }}</div>
-                    <div class="w-full"><span class="font-semibold">Disk Used:</span> {{ formattedSize(lib.diskInfo._used, 'KB') }}</div>
-                    <div class="w-full"><span class="font-semibold">Disk Available:</span> {{ formattedSize(lib.diskInfo._available, 'KB') }}</div>
-                    <div class="w-full"><span class="font-semibold">Disk Capacity:</span> {{ lib.diskInfo._capacity }}</div>
-                  </div>
-                </label>
-              </li>
-            </ul>
+              <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+                <span class="text-l font-bold tracking-tight dark:text-white">Library Path:</span>
+                <span class="font-normal">{{ libSelected }}</span>
+
+                <span class="text-l font-bold tracking-tight dark:text-white">Prefix Alias:</span>
+                <span class="font-normal">{{ prefixSelected }}</span>
+
+                <span class="text-l font-bold tracking-tight dark:text-white">Local Game Path:</span>
+                <span class="font-normal">{{ data.gameItem.localState.downloading.localGamePath }}</span>
+
+                <span class="text-l font-bold tracking-tight dark:text-white">Remote Game Path:</span>
+                <span class="font-normal">{{ data.gameItem.localState.downloading.remoteGamePath }}</span>
+
+                <span class="text-l font-bold tracking-tight dark:text-white">Local Prefix Path:</span>
+                <span class="font-normal">{{ data.gameItem.localState.downloading.localPrefixPath }}</span>
+
+                <span class="text-l font-bold tracking-tight dark:text-white">Remote Prefix Path:</span>
+                <span class="font-normal">{{ data.gameItem.localState.downloading.remotePrefixPath }}</span>
+              </div>
+            </div>
           </div>
 
-          <div v-if="data.availablePrefixes.length > 1" class="p-2 mb-2">
-            <h3 class="text-lg font-semibold mb-4">Please select a prefix to download with the game</h3>
-            <h4 class="text-sm font-semibold mb-2">The Default prefix is the Initial one, it has no Saves</h4>
+          <div v-if="!data.gameItem.localState.downloading">
+            <div class="p-2 mb-2">
+              <h3 class="text-lg font-semibold mb-4">Please select a Library where the game will be downloaded to</h3>
 
-            <ul class="grid w-full gap-6 md:grid-cols-3">
-              <li v-for="prefix in data.availablePrefixes" :key="prefix.alias">
-                <input
-                  :id="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
-                  v-model="prefixSelected"
-                  :value="prefix.alias"
-                  type="radio"
-                  name="prefix-selected"
-                  class="hidden peer"
-                  required
-                />
-                <label
-                  :for="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
-                  class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-green-500 dark:peer-checked:border-green-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900 dark:hover:peer-checked:text-green-400"
-                  :class="{
-                    'dark:text-yellow-500 dark:peer-checked:text-yellow-600 dark:hover:text-yellow-600 dark:hover:peer-checked:text-yellow-600': prefix.alias === 'default',
-                  }"
-                >
-                  <div class="block">
-                    <div class="w-full text-lg font-semibold inline-flex items-center justify-between">
-                      {{ prefix.alias }}
-                      <svg
-                        v-if="prefixSelected === prefix.alias"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="size-6"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+              <ul class="grid w-full gap-6 md:grid-cols-2">
+                <li v-for="lib in data.availableLibs" :key="lib.path">
+                  <input
+                    :id="'lib-' + lib.path + '-' + data.gameItem.steamAppId"
+                    v-model="libSelected"
+                    :value="lib.path"
+                    type="radio"
+                    name="lib-selected"
+                    class="hidden peer"
+                    required
+                  />
+                  <label
+                    :for="'lib-' + lib.path + '-' + data.gameItem.steamAppId"
+                    class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-green-500 dark:peer-checked:border-green-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900 dark:hover:peer-checked:text-green-400"
+                  >
+                    <div class="block">
+                      <div class="w-full text-lg font-semibold inline-flex items-center justify-between mb-4">
+                        {{ lib.path }}
+                        <svg
+                          v-if="libSelected === lib.path"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="size-6"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                      </div>
+                      <div class="w-full mb-4"><span class="font-semibold">Download Location:</span> {{ lib.downloadLocation }}</div>
+                      <div class="w-full"><span class="font-semibold">Disk Used:</span> {{ formattedSize(lib.diskInfo._used, 'KB') }}</div>
+                      <div class="w-full"><span class="font-semibold">Disk Available:</span> {{ formattedSize(lib.diskInfo._available, 'KB') }}</div>
+                      <div class="w-full"><span class="font-semibold">Disk Capacity:</span> {{ lib.diskInfo._capacity }}</div>
                     </div>
-                    <div class="w-full">{{ prefix.path }}</div>
-                  </div>
-                </label>
-              </li>
-            </ul>
+                  </label>
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="data.availablePrefixes.length > 1" class="p-2 mb-2">
+              <h3 class="text-lg font-semibold mb-4">Please select a prefix to download with the game</h3>
+              <h4 class="text-sm font-semibold mb-2">The Default prefix is the Initial one, it has no Saves</h4>
+
+              <ul class="grid w-full gap-6 md:grid-cols-3">
+                <li v-for="prefix in data.availablePrefixes" :key="prefix.alias">
+                  <input
+                    :id="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
+                    v-model="prefixSelected"
+                    :value="prefix.alias"
+                    type="radio"
+                    name="prefix-selected"
+                    class="hidden peer"
+                    required
+                  />
+                  <label
+                    :for="'prefix-' + prefix.alias + '-' + data.gameItem.steamAppId"
+                    class="inline-flex text-wrap break-all items-center justify-between w-full h-full p-5 border-4 rounded-lg cursor-pointer dark:hover:text-gray-300 dark:border-gray-700 dark:peer-checked:text-green-500 dark:peer-checked:border-green-600 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-900 dark:hover:peer-checked:text-green-400"
+                    :class="{
+                      'dark:text-yellow-500 dark:peer-checked:text-yellow-600 dark:hover:text-yellow-600 dark:hover:peer-checked:text-yellow-600': prefix.alias === 'default',
+                    }"
+                  >
+                    <div class="block">
+                      <div class="w-full text-lg font-semibold inline-flex items-center justify-between">
+                        {{ prefix.alias }}
+                        <svg
+                          v-if="prefixSelected === prefix.alias"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="size-6"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                      </div>
+                      <div class="w-full">{{ prefix.path }}</div>
+                    </div>
+                  </label>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <div class="grid w-full md:grid-cols-6 gap-4 mt-4">
@@ -1024,7 +1114,7 @@ function makeRawGameItem() {
                 :class="{ 'opacity-50 cursor-not-allowed from-gray-400 via-gray-500 to-gray-600': !libSelected }"
                 @click="onActionConfirmGameDownload"
               >
-                Start Download
+                {{ data.gameItem.localState.downloading ? 'Resume Download' : 'Start Download' }}
               </button>
 
               <button
@@ -1032,7 +1122,7 @@ function makeRawGameItem() {
                 class="text-white bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:bg-gradient-to-br dark:focus:ring-red-800 dark:shadow-lg dark:shadow-red-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
                 @click="onActionCancelGameDownload"
               >
-                Cancel Download
+                Cancel
               </button>
             </div>
           </div>

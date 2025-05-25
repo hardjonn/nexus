@@ -59,7 +59,7 @@ function appState_mergeDbAndSteamGamesWithLocalGames(dbGamesMap, steamGamesMap) 
     remotePrefixSizeInBytes: 0,
 
     localState: {
-      isDownloading: false,
+      downloading: null,
     },
   };
 

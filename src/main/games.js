@@ -584,40 +584,46 @@ async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath
   console.log('games::downloadGameFromRemote: localPrefixPath: ' + localPrefixPath);
   console.log('games::downloadGameFromRemote: remotePrefixPath: ' + remotePrefixPath);
 
-  return {
-    status: 'error',
-    error: {
-      message: 'Not implemented',
+  gameItem = updateGameItemState(steamAppId, {
+    localState: {
+      downloading: {
+        localGamePath,
+        remoteGamePath,
+        localPrefixPath,
+        remotePrefixPath,
+        libPath,
+        prefixAlias,
+      },
     },
-  };
+  });
 
-  // try {
-  //   // 1. download the game from the remote
-  //   await downloadWithRsync({
-  //     abortId: steamAppId,
-  //     sourcePath: remoteGamePath,
-  //     destinationPath: localGamePath,
-  //     host: config.remote_lib.host,
-  //     username: config.remote_lib.user,
-  //     privateKeyPath: config.remote_lib.private_key_path,
-  //     onProgress: (output) => {
-  //       const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
-  //       progressCallback(augmentedWithSteamAppIdOutput);
-  //     },
-  //   });
+  try {
+    // 1. download the game from the remote
+    await downloadWithRsync({
+      abortId: steamAppId,
+      sourcePath: remoteGamePath,
+      destinationPath: localGamePath,
+      host: config.remote_lib.host,
+      username: config.remote_lib.user,
+      privateKeyPath: config.remote_lib.private_key_path,
+      onProgress: (output) => {
+        const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
+        progressCallback(augmentedWithSteamAppIdOutput);
+      },
+    });
 
-  //   console.log('games::downloadGameFromRemote: Download completed successfully!');
-  // } catch (error) {
-  //   console.error('games::downloadGameFromRemote: Download failed:', error);
+    console.log('games::downloadGameFromRemote: Download completed successfully!');
+  } catch (error) {
+    console.error('games::downloadGameFromRemote: Download failed:', error);
 
-  //   return {
-  //     status: 'error',
-  //     gameItem: gameItem,
-  //     error: {
-  //       message: 'Failed to upload game to remote: ' + error,
-  //     },
-  //   };
-  // }
+    return {
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Failed to upload game to remote: ' + error,
+      },
+    };
+  }
 }
 
 async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
