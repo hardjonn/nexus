@@ -26,6 +26,9 @@ const defaultConfig = {
     games_path: 'Games',
     prefixes_path: '',
   },
+  port_proton: {
+    path: '~.var/app/ru.linux_gaming.PortProton',
+  },
   app: {
     window_bounds: {
       x: 240,
@@ -128,6 +131,15 @@ const schema = {
         },
       },
     },
+    port_proton: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          default: '~/.var/app/ru.linux_gaming.PortProton',
+        },
+      },
+    },
     app: {
       type: 'object',
       properties: {
@@ -169,6 +181,7 @@ function saveConfig(configData) {
   conf.set('steam', configData.steam);
   conf.set('remote_lib', configData.remote_lib);
   conf.set('local_lib', configData.local_lib);
+  conf.set('port_proton', configData.port_proton);
 
   return true;
 }
@@ -180,6 +193,7 @@ function getConfig() {
     steam: conf.get('steam'),
     remote_lib: conf.get('remote_lib'),
     local_lib: conf.get('local_lib'),
+    port_proton: conf.get('port_proton'),
     app: conf.get('app'),
   };
 }
