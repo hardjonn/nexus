@@ -8,7 +8,13 @@ import { uploadWithRsync, abortRsyncTransferByItemId, downloadWithRsync } from '
 import { setGamesMapState, updateGameItemState } from './app.state';
 import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
-import { adjustedGameWithLocalAndRemoteDetails, getGameAndPrefixPath, getLocalDirectoryHashAndSize, getRemoteDirectoryHashAndSize } from './game.details';
+import {
+  adjustedGameWithLocalAndRemoteDetails,
+  getGameAndPrefixPath,
+  getGameAndPrefixPathForDownload,
+  getLocalDirectoryHashAndSize,
+  getRemoteDirectoryHashAndSize,
+} from './game.details';
 import { getDownloadDetails } from './game.download';
 
 // once a game is added to the DB and uploaded to the NAS
@@ -570,7 +576,7 @@ async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath
 
   const config = getConfig();
 
-  const { localGamePath, remoteGamePath, localPrefixPath, remotePrefixPath } = getGameAndPrefixPath(gameItem, prefixAlias);
+  const { localGamePath, remoteGamePath, localPrefixPath, remotePrefixPath } = getGameAndPrefixPathForDownload(gameItem, libPath, prefixAlias);
 
   console.log('games::downloadGameFromRemote: localGamePath: ' + localGamePath);
   console.log('games::downloadGameFromRemote: remoteGamePath: ' + remoteGamePath);

@@ -1,5 +1,5 @@
 import { Conf } from 'electron-conf/main';
-import { getRealLocalGamePath, getRealLocalPrefixPath } from './game.details';
+import { getRealLocalGamePath, makeRealLocalPrefixPath } from './game.details';
 
 // this file is used to store the state of the app
 // it's a single source of truth for the games
@@ -74,7 +74,7 @@ function appState_mergeDbAndSteamGamesWithLocalGames(dbGamesMap, steamGamesMap) 
       };
 
       localGameItem.realLocalGamePath = getRealLocalGamePath(gameItem.gameLocation);
-      localGameItem.realLocalPrefixPath = getRealLocalPrefixPath(gameItem.prefixLocation);
+      localGameItem.realLocalPrefixPath = makeRealLocalPrefixPath(gameItem.prefixLocation);
     }
 
     finalGamesMap[steamAppId] = {

@@ -24,7 +24,7 @@ async function adjustedGameWithLocalAndRemoteDetails(game) {
   const config = getConfig();
 
   game.realLocalGamePath = getRealLocalGamePath(game.gameLocation);
-  game.realLocalPrefixPath = getRealLocalPrefixPath(game.prefixLocation);
+  game.realLocalPrefixPath = makeRealLocalPrefixPath(game.prefixLocation);
 
   console.log('game.details::adjustedGameWithLocalAndRemoteDetails: Local game path:', game.realLocalGamePath);
 
@@ -305,6 +305,23 @@ function getGameAndPrefixPath(gameItem, prefixAlias) {
   };
 }
 
+function getGameAndPrefixPathForDownload(gameItem, libPath, prefixAlias) {
+  const config = getConfig();
+
+  const localGamePath = path.join(libPath, gameItem.gameLocation);
+  const remoteGamePath = path.join(config.remote_lib.games_path, gameItem.gameLocation);
+
+  const localPrefixPath = makeLocalPrefixPath(gameItem.prefixLocation);
+  const remotePrefixPath = makeRemotePrefixPath(gameItem.prefixLocation, prefixAlias);
+
+  return {
+    localGamePath: localGamePath,
+    remoteGamePath: remoteGamePath,
+    localPrefixPath: localPrefixPath,
+    remotePrefixPath: remotePrefixPath,
+  };
+}
+
 function getRealLocalGamePath(gameLocation) {
   const config = getConfig();
 
@@ -341,34 +358,89 @@ function getRealLocalGamePath(gameLocation) {
   return null;
 }
 
-function getRealLocalPrefixPath(prefixLocation) {
+function makeRemotePrefixPath(prefixLocation, prefixAlias) {
   const config = getConfig();
 
   if (!prefixLocation) {
-    console.error('game.item::getRealLocalPrefixPath: Prefix location is not specified');
+    console.error('game.item::makeRemotePrefixPath: Prefix location is not specified');
+    return null;
+  }
+
+  if (!prefixAlias) {
+    console.error('game.item::makeRemotePrefixPath: Prefix alias is not specified');
+    return null;
+  }
+
+  if (prefixAlias === 'NONE') {
+    console.log('game.item::makeRemotePrefixPath: Prefix alias is NONE, returning null');
+    return null;
+  }
+
+  if (!config.remote_lib.prefixes_path.trim()) {
+    console.error('game.item::makeRemotePrefixPath: Prefixes lib path client config is not specified');
+    return null;
+  }
+
+  try {
+    const remotePrefixPath = path.join(config.remote_lib.prefixes_path, prefixAlias, prefixLocation);
+    console.log('game.item::makeRemotePrefixPath: Remote Prefix Path:', remotePrefixPath);
+
+    return remotePrefixPath;
+  } catch (error) {
+    console.error('game.item::makeRemotePrefixPath: Error making remote prefix path:', error);
+    return null;
+  }
+}
+
+function makeLocalPrefixPath(prefixLocation) {
+  const config = getConfig();
+
+  if (!prefixLocation) {
+    console.error('game.item::makeLocalPrefixPath: Prefix location is not specified');
     return null;
   }
 
   if (!config.local_lib.prefixes_path.trim()) {
-    console.error('game.item::getRealLocalPrefixPath: Prefixes lib path client config is not specified');
+    console.error('game.item::makeLocalPrefixPath: Prefixes lib path client config is not specified');
     return null;
   }
 
   try {
     const localPrefixPath = path.join(config.local_lib.prefixes_path, prefixLocation);
 
-    if (!fs.existsSync(localPrefixPath)) {
-      console.log('game.item::getRealLocalPrefixPath: Prefix not found at the following location: ' + localPrefixPath);
-      return null;
-    }
-
-    console.log('game.item::getRealLocalPrefixPath: Local Prefix Path:', localPrefixPath);
+    console.log('game.item::makeLocalPrefixPath: Local Prefix Path:', localPrefixPath);
 
     return localPrefixPath;
   } catch (error) {
-    console.error('game.item::getRealLocalPrefixPath: Error getting local prefix path:', error);
+    console.error('game.item::makeLocalPrefixPath: Error making local prefix path:', error);
     return null;
   }
 }
 
-export { adjustedGameWithLocalAndRemoteDetails, getGameAndPrefixPath, getLocalDirectoryHashAndSize, getRemoteDirectoryHashAndSize, getRealLocalGamePath, getRealLocalPrefixPath };
+function makeRealLocalPrefixPath(prefixLocation) {
+  try {
+    const localPrefixPath = makeLocalPrefixPath(prefixLocation);
+
+    if (!fs.existsSync(localPrefixPath)) {
+      console.log('game.item::makeRealLocalPrefixPath: Prefix not found at the following location: ' + localPrefixPath);
+      return null;
+    }
+
+    console.log('game.item::makeRealLocalPrefixPath: Local Prefix Path:', localPrefixPath);
+
+    return localPrefixPath;
+  } catch (error) {
+    console.error('game.item::makeRealLocalPrefixPath: Error making local prefix path:', error);
+    return null;
+  }
+}
+
+export {
+  adjustedGameWithLocalAndRemoteDetails,
+  getGameAndPrefixPath,
+  getGameAndPrefixPathForDownload,
+  getLocalDirectoryHashAndSize,
+  getRemoteDirectoryHashAndSize,
+  getRealLocalGamePath,
+  makeRealLocalPrefixPath,
+};
