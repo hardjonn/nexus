@@ -411,10 +411,6 @@ const shouldShowDownloadGameButton = computed(() => {
     return false;
   }
 
-  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
-    return false;
-  }
-
   return true;
 });
 

@@ -15,7 +15,7 @@ import {
   getLocalDirectoryHashAndSize,
   getRemoteDirectoryHashAndSize,
 } from './game.details';
-import { getDownloadDetails } from './game.download';
+import { getDownloadDetails, runPostDownloadActions } from './game.download';
 
 // once a game is added to the DB and uploaded to the NAS
 // it will source as the single source of truth
@@ -612,18 +612,83 @@ async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath
       },
     });
 
-    console.log('games::downloadGameFromRemote: Download completed successfully!');
+    gameItem.realLocalGamePath = localGamePath;
+    gameItem = updateGameItemState(steamAppId, gameItem);
+
+    console.log('games::downloadGameFromRemote: Game downloaded successfully!');
   } catch (error) {
-    console.error('games::downloadGameFromRemote: Download failed:', error);
+    console.error('games::downloadGameFromRemote: Game download failed:', error);
 
     return {
       status: 'error',
       gameItem: gameItem,
       error: {
-        message: 'Failed to upload game to remote: ' + error,
+        message: 'Failed to download game from remote: ' + error,
       },
     };
   }
+
+  // 2. check if we need to download the prefix from remote as well
+  // for PORT_PROTON prefix is the mandatory part of the game
+  // but it boils down to the fact that the prefixAlias is specified
+  if (localPrefixPath && remotePrefixPath) {
+    try {
+      await downloadWithRsync({
+        abortId: steamAppId,
+        sourcePath: remotePrefixPath,
+        destinationPath: localPrefixPath,
+        host: config.remote_lib.host,
+        username: config.remote_lib.user,
+        privateKeyPath: config.remote_lib.private_key_path,
+        onProgress: (output) => {
+          const augmentedWithSteamAppIdOutput = augmentOutputWithProgressId(output, steamAppId);
+          progressCallback(augmentedWithSteamAppIdOutput);
+        },
+      });
+
+      gameItem.realLocalPrefixPath = localPrefixPath;
+      gameItem = updateGameItemState(steamAppId, gameItem);
+
+      console.log('games::downloadGameFromRemote: Prefix downloaded successfully!');
+    } catch (error) {
+      console.error('games::downloadGameFromRemote: Prefix download failed:', error);
+
+      return {
+        status: 'error',
+        gameItem: gameItem,
+        error: {
+          message: 'Failed to download prefix from remote: ' + error,
+        },
+      };
+    }
+  }
+
+  // 3. check if we need to run any post-download actions
+  // for example, for PORT_PROTON we need to run the post-download script
+  // the actions are dependent on the game launcher
+  try {
+    console.log('games::downloadGameFromRemote: Running post download actions for launcher: ' + gameItem.launcher);
+    await runPostDownloadActions(gameItem);
+  } catch (error) {
+    console.error('games::downloadGameFromRemote: Error running post download actions:', error);
+
+    return {
+      status: 'error',
+      gameItem: gameItem,
+      error: {
+        message: 'Failed to run post download actions: ' + error,
+      },
+    };
+  }
+
+  gameItem.localState.downloading = null;
+  gameItem = updateGameItemState(steamAppId, gameItem);
+
+  return {
+    status: 'success',
+    message: 'Game downloaded successfully',
+    gameItem: gameItem,
+  };
 }
 
 async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
@@ -658,37 +723,28 @@ async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
     errors.push('Failed to delete game from local: ' + error);
   }
 
-  if (!deletePrefix) {
-    return {
-      status: 'success',
-      message: 'Game deleted successfully',
-      gameItem: gameItem,
-      error: {
-        message: errors.length ? 'There were some errors while deleting the game' : null,
-        errors: errors,
-      },
-    };
-  }
+  if (deletePrefix) {
+    try {
+      console.log('games::deleteGameFromLocal: Deleting prefix...');
 
-  try {
-    console.log('games::deleteGameFromLocal: Deleting prefix...');
+      if (!fs.existsSync(gameItem.realLocalPrefixPath)) {
+        console.error('games::deleteGameFromLocal: Game item real local prefix path does not exist');
+        errors.push('Game item real local prefix path does not exist: ' + gameItem.realLocalPrefixPath);
+      } else {
+        console.log('games::deleteGameFromLocal: Deleting prefix: ' + gameItem.realLocalPrefixPath);
+        fs.rmSync(gameItem.realLocalPrefixPath, { recursive: true });
+      }
 
-    if (!fs.existsSync(gameItem.realLocalPrefixPath)) {
-      console.error('games::deleteGameFromLocal: Game item real local prefix path does not exist');
-      errors.push('Game item real local prefix path does not exist: ' + gameItem.realLocalPrefixPath);
-    } else {
-      console.log('games::deleteGameFromLocal: Deleting prefix: ' + gameItem.realLocalPrefixPath);
-      fs.rmSync(gameItem.realLocalPrefixPath, { recursive: true });
+      gameItem.realLocalPrefixPath = null;
+      gameItem.localPrefixHash = null;
+      gameItem.localPrefixSizeInBytes = 0;
+    } catch (error) {
+      console.error('games::deleteGameFromLocal: Error deleting prefix:', error);
+      errors.push('Failed to delete prefix: ' + error);
     }
-
-    gameItem.realLocalPrefixPath = null;
-    gameItem.localPrefixHash = null;
-    gameItem.localPrefixSizeInBytes = 0;
-  } catch (error) {
-    console.error('games::deleteGameFromLocal: Error deleting prefix:', error);
-    errors.push('Failed to delete prefix: ' + error);
   }
 
+  gameItem.localState.downloading = null;
   gameItem = updateGameItemState(gameItem.steamAppId, gameItem);
 
   return {

@@ -89,4 +89,21 @@ async function getAvailableLibs(config, gameLocation) {
   }
 }
 
-export { getDownloadDetails };
+async function runPostDownloadActions(gameItem) {
+  const config = getConfig();
+
+  try {
+    if (gameItem.launcher === 'PORT_PROTON') {
+      await runPostDownloadAction_PortProton(gameItem);
+    }
+  } catch (error) {
+    console.error('games::runPostDownloadActions: Error running post download actions:', error);
+    throw error;
+  }
+}
+
+async function runPostDownloadAction_PortProton(gameItem) {
+  console.log('games::runPostDownloadAction_PortProton: Running post download actions for port proton');
+}
+
+export { getDownloadDetails, runPostDownloadActions };
