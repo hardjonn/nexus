@@ -1,6 +1,5 @@
 <script setup>
 import { computed, reactive, toRaw, watch, ref } from 'vue';
-import path from 'node:path';
 const { webUtils } = require('electron');
 import {
   uploadIcon,
@@ -41,6 +40,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update-game-item']);
+
+const launchers = ['NOOP', 'PORT_PROTON', 'PS2', 'PS3', 'SWITCH_CITRON', 'SWITCH_RYUJINX'];
 
 const nonePrefix = {
   alias: 'NONE',
@@ -1293,61 +1294,19 @@ function makeRawGameItem() {
         />
 
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Launcher:</span>
-        <ul class="items-center w-full text-sm font-medium border rounded-lg sm:flex dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-          <li class="w-full border-b dark:border-gray-600">
-            <div class="flex items-center ps-3">
+        <ul class="items-center w-full text-sm font-medium border rounded-lg sm:flex justify-between pl-2 pr-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          <li v-for="launcher in launchers" :key="launcher" class="border-b dark:border-gray-600">
+            <div class="flex items-center">
               <input
-                :id="`launcher-noop-${data.gameItem.steamAppId}`"
+                :id="`launcher-${launcher}-${data.gameItem.steamAppId}`"
                 v-model="data.gameItem.launcher"
-                value="NOOP"
+                :value="launcher"
                 type="radio"
                 :name="`launcher-${data.gameItem.steamAppId}`"
                 :disabled="!isProcessingAction(processingActions.editingGameItem)"
                 class="w-4 h-4 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
               />
-              <label :for="`launcher-noop-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium0 dark:text-gray-300">NOOP</label>
-            </div>
-          </li>
-          <li class="w-full border-b dark:border-gray-600">
-            <div class="flex items-center ps-3">
-              <input
-                :id="`launcher-port-proton-${data.gameItem.steamAppId}`"
-                v-model="data.gameItem.launcher"
-                value="PORT_PROTON"
-                type="radio"
-                :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!isProcessingAction(processingActions.editingGameItem)"
-                class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
-              />
-              <label :for="`launcher-port-proton-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">PORT_PROTON</label>
-            </div>
-          </li>
-          <li class="w-full border-b dark:border-gray-600">
-            <div class="flex items-center ps-3">
-              <input
-                :id="`launcher-ps2-${data.gameItem.steamAppId}`"
-                v-model="data.gameItem.launcher"
-                value="PS2"
-                type="radio"
-                :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!isProcessingAction(processingActions.editingGameItem)"
-                class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
-              />
-              <label :for="`launcher-ps2-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">PS2</label>
-            </div>
-          </li>
-          <li class="w-full dark:border-gray-600">
-            <div class="flex items-center ps-3">
-              <input
-                :id="`launcher-ps3-${data.gameItem.steamAppId}`"
-                v-model="data.gameItem.launcher"
-                value="PS3"
-                type="radio"
-                :name="`launcher-${data.gameItem.steamAppId}`"
-                :disabled="!isProcessingAction(processingActions.editingGameItem)"
-                class="w-4 h-4 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 dark:bg-gray-600 dark:border-gray-500"
-              />
-              <label :for="`launcher-ps3-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">PS3</label>
+              <label :for="`launcher-${launcher}-${data.gameItem.steamAppId}`" class="w-full py-3 ms-2 text-sm font-medium dark:text-gray-300">{{ launcher }}</label>
             </div>
           </li>
         </ul>

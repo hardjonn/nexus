@@ -29,7 +29,7 @@ function initGameModel(sequelize) {
       type: DataTypes.STRING,
     },
     launcher: {
-      type: DataTypes.ENUM('NOOP', 'PORT_PROTON', 'PS2', 'PS3'), // Define the ENUM type and its values
+      type: DataTypes.ENUM('NOOP', 'PORT_PROTON', 'PS2', 'PS3', 'SWITCH_CITRON', 'SWITCH_RYUJINX'), // Define the ENUM type and its values
       defaultValue: 'NOOP', // Set the default value
       allowNull: false,
     },
