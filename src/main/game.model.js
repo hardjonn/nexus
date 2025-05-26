@@ -33,6 +33,9 @@ function initGameModel(sequelize) {
       defaultValue: 'NOOP', // Set the default value
       allowNull: false,
     },
+    launcher_target: {
+      type: DataTypes.STRING,
+    },
     game_hash_md5: {
       type: DataTypes.STRING,
     },

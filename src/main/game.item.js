@@ -11,6 +11,7 @@ function makeGameItemFromDbItem(game) {
     gameLocation: game['game_location'],
     prefixLocation: game['prefix_location'],
     launcher: game['launcher'],
+    launcherTarget: game['launcher_target'],
     gameHash: game['game_hash_md5'],
     gameSizeInBytes: game['game_size_in_bytes'],
     prefixHash: game['prefix_hash_md5'],
@@ -37,6 +38,7 @@ function makeGameItemFromSteamItem(shortcut) {
     gameLocation: null, // gameLocation does not exist for steam entries
     prefixLocation: null, // prefixLocation does not exist for steam entries
     launcher: 'NOOP',
+    launcherTarget: null,
     gameHash: null,
     gameSizeInBytes: 0,
     prefixHash: null,

@@ -27,7 +27,7 @@ const defaultConfig = {
     prefixes_path: '',
   },
   port_proton: {
-    path: '~.var/app/ru.linux_gaming.PortProton',
+    path: '~/.var/app/ru.linux_gaming.PortProton',
   },
   app: {
     window_bounds: {

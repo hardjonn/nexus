@@ -1,5 +1,6 @@
 const nodeDiskInfo = require('node-disk-info');
 const path = require('path');
+const fs = require('fs-extra');
 
 import { getConfig } from './conf';
 import { getListOfPrefixesOnRemote } from './transfer';
@@ -94,7 +95,7 @@ async function runPostDownloadActions(gameItem) {
 
   try {
     if (gameItem.launcher === 'PORT_PROTON') {
-      await runPostDownloadAction_PortProton(gameItem);
+      await runPostDownloadAction_PortProton(config, gameItem);
     }
   } catch (error) {
     console.error('games::runPostDownloadActions: Error running post download actions:', error);
@@ -102,8 +103,32 @@ async function runPostDownloadActions(gameItem) {
   }
 }
 
-async function runPostDownloadAction_PortProton(gameItem) {
+async function runPostDownloadAction_PortProton(config, gameItem) {
   console.log('games::runPostDownloadAction_PortProton: Running post download actions for port proton');
+
+  try {
+    const launcherTargetFullPath = path.join(gameItem.realLocalGamePath, gameItem.launcherTarget);
+    console.log('games::runPostDownloadAction_PortProton: Launcher Target Full Path:', launcherTargetFullPath);
+
+    const portProtonLauncherPath = path.join(config.port_proton.path, 'data/scripts/start.sh');
+    console.log('games::runPostDownloadAction_PortProton: Port Proton Launcher Path:', portProtonLauncherPath);
+
+    const portProtonScriptLocation = gameItem.steamExeTarget.replace(/^"(.*)"$/, '$1');
+    console.log('games::runPostDownloadAction_PortProton: Port Proton Script Location:', portProtonScriptLocation);
+
+    const template =
+      '#!/usr/bin/env bash\n' +
+      'export LD_PRELOAD=\n' +
+      'export START_FROM_STEAM=1\n' +
+      'export START_FROM_FLATPAK=1\n' +
+      `"${portProtonLauncherPath}" "${launcherTargetFullPath}" "$@"`;
+    console.log('games::runPostDownloadAction_PortProton: Template:', template);
+
+    fs.writeFileSync(portProtonScriptLocation, template);
+  } catch (error) {
+    console.error('games::runPostDownloadAction_PortProton: Error running post download action for Port Proton:', error);
+    throw error;
+  }
 }
 
 export { getDownloadDetails, runPostDownloadActions };

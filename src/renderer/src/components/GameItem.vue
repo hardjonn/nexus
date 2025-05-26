@@ -1351,6 +1351,17 @@ function makeRawGameItem() {
             </div>
           </li>
         </ul>
+
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Launcher Target:</span>
+        <div v-if="data.gameItem.launcher === 'PORT_PROTON'" class="w-full inline-flex">
+          <span class="font-normal py-2.5 text-gray-400 mr-2">{{ data.gameItem.gameLocation }}/</span>
+          <input
+            v-model="data.gameItem.launcherTarget"
+            type="text"
+            class="border text-sm rounded-lg block flex-1 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            :disabled="!isProcessingAction(processingActions.editingGameItem)"
+          />
+        </div>
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">

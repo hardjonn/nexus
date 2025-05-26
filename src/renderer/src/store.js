@@ -25,6 +25,11 @@ const store = reactive({
     prefixes_path: 'Nexus/Prefixes',
   },
 
+  // port proton config
+  port_proton: {
+    path: '',
+  },
+
   // local config
   local_lib: {
     games_path: 'Games',
@@ -49,6 +54,7 @@ window.confAPI.getConfig().then((config) => {
   store.db = config.db;
   store.steam = config.steam;
   store.remote_lib = config.remote_lib;
+  store.port_proton = config.port_proton;
   store.local_lib = config.local_lib;
   store.app = config.app;
 });
