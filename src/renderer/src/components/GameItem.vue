@@ -1312,7 +1312,7 @@ function makeRawGameItem() {
         </ul>
 
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Launcher Target:</span>
-        <div v-if="data.gameItem.launcher === 'PORT_PROTON'" class="w-full inline-flex">
+        <div class="w-full inline-flex">
           <span class="font-normal py-2.5 text-gray-400 mr-2">{{ data.gameItem.gameLocation }}/</span>
           <input
             v-model="data.gameItem.launcherTarget"
