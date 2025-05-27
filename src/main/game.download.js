@@ -97,6 +97,22 @@ async function runPostDownloadActions(gameItem) {
     if (gameItem.launcher === 'PORT_PROTON') {
       await runPostDownloadAction_PortProton(config, gameItem);
     }
+
+    if (gameItem.launcher === 'PS2') {
+      await runPostDownloadAction_PS2(config, gameItem);
+    }
+
+    if (gameItem.launcher === 'PS3') {
+      await runPostDownloadAction_PS3(config, gameItem);
+    }
+
+    if (gameItem.launcher === 'SWITCH_CITRON') {
+      await runPostDownloadAction_SwitchCitron(config, gameItem);
+    }
+
+    if (gameItem.launcher === 'SWITCH_RYUJINX') {
+      await runPostDownloadAction_SwitchRyuJinX(config, gameItem);
+    }
   } catch (error) {
     console.error('games::runPostDownloadActions: Error running post download actions:', error);
     throw error;
@@ -127,6 +143,62 @@ async function runPostDownloadAction_PortProton(config, gameItem) {
     fs.writeFileSync(portProtonScriptLocation, template);
   } catch (error) {
     console.error('games::runPostDownloadAction_PortProton: Error running post download action for Port Proton:', error);
+    throw error;
+  }
+}
+
+async function runPostDownloadAction_PS2(config, gameItem) {
+  console.log('games::runPostDownloadAction_PS2: Running post download actions for PS2');
+
+  try {
+    const romLink = path.join(config.emulation.path, 'roms', 'ps2', gameItem.launcherTarget);
+    console.log('games::runPostDownloadAction_PS2: ROM Link:', romLink);
+
+    const linkPointsTo = path.join(gameItem.realLocalGamePath, gameItem.launcherTarget);
+    console.log('games::runPostDownloadAction_PS2: Link Points To:', linkPointsTo);
+
+    const stat = fs.lstatSync(romLink);
+    console.log('games::runPostDownloadAction_PS2: ROM Link Stats:', stat);
+
+    if (stat.isSymbolicLink()) {
+      console.log('games::runPostDownloadAction_PS2: ROM Link is a symlink, removing it');
+      fs.unlinkSync(romLink);
+    }
+
+    fs.ensureSymlinkSync(linkPointsTo, romLink);
+    console.log('games::runPostDownloadAction_PS2: Link created successfully');
+  } catch (error) {
+    console.error('games::runPostDownloadAction_PS2: Error running post download action for PS2:', error);
+    throw error;
+  }
+}
+
+async function runPostDownloadAction_PS3(config, gameItem) {
+  console.log('games::runPostDownloadAction_PS3: Running post download actions for PS3');
+
+  try {
+  } catch (error) {
+    console.error('games::runPostDownloadAction_PS3: Error running post download action for PS3:', error);
+    throw error;
+  }
+}
+
+async function runPostDownloadAction_SwitchCitron(config, gameItem) {
+  console.log('games::runPostDownloadAction_SwitchCitron: Running post download actions for Switch Citron');
+
+  try {
+  } catch (error) {
+    console.error('games::runPostDownloadAction_SwitchCitron: Error running post download action for Switch Citron:', error);
+    throw error;
+  }
+}
+
+async function runPostDownloadAction_SwitchRyuJinX(config, gameItem) {
+  console.log('games::runPostDownloadAction_SwitchRyuJinX: Running post download actions for Switch RyuJinX');
+
+  try {
+  } catch (error) {
+    console.error('games::runPostDownloadAction_SwitchRyuJinX: Error running post download action for Switch RyuJinX:', error);
     throw error;
   }
 }
