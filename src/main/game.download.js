@@ -157,12 +157,16 @@ async function runPostDownloadAction_PS2(config, gameItem) {
     const linkPointsTo = path.join(gameItem.realLocalGamePath, gameItem.launcherTarget);
     console.log('games::runPostDownloadAction_PS2: Link Points To:', linkPointsTo);
 
-    const stat = fs.lstatSync(romLink);
-    console.log('games::runPostDownloadAction_PS2: ROM Link Stats:', stat);
+    try {
+      const stat = fs.lstatSync(romLink);
+      console.log('games::runPostDownloadAction_PS2: ROM Link Stats:', stat);
 
-    if (stat.isSymbolicLink()) {
-      console.log('games::runPostDownloadAction_PS2: ROM Link is a symlink, removing it');
-      fs.unlinkSync(romLink);
+      if (stat.isSymbolicLink()) {
+        console.log('games::runPostDownloadAction_PS2: ROM Link is a symlink, removing it');
+        fs.unlinkSync(romLink);
+      }
+    } catch (error) {
+      console.error('games::runPostDownloadAction_PS2: Error getting ROM link stats:', error);
     }
 
     fs.ensureSymlinkSync(linkPointsTo, romLink);
@@ -177,6 +181,29 @@ async function runPostDownloadAction_PS3(config, gameItem) {
   console.log('games::runPostDownloadAction_PS3: Running post download actions for PS3');
 
   try {
+    const gameLocationFolderName = path.basename(gameItem.gameLocation);
+    console.log('games::runPostDownloadAction_PS3: Game Location Folder Name:', gameLocationFolderName);
+
+    const romLink = path.join(config.emulation.path, 'roms', 'ps3', gameLocationFolderName);
+    console.log('games::runPostDownloadAction_PS3: ROM Link:', romLink);
+
+    const linkPointsTo = gameItem.realLocalGamePath;
+    console.log('games::runPostDownloadAction_PS3: Link Points To:', linkPointsTo);
+
+    try {
+      const stat = fs.lstatSync(romLink);
+      console.log('games::runPostDownloadAction_PS3: ROM Link Stats:', stat);
+
+      if (stat.isSymbolicLink()) {
+        console.log('games::runPostDownloadAction_PS3: ROM Link is a symlink, removing it');
+        fs.unlinkSync(romLink);
+      }
+    } catch (error) {
+      console.error('games::runPostDownloadAction_PS3: Error getting ROM link stats:', error);
+    }
+
+    fs.ensureSymlinkSync(linkPointsTo, romLink);
+    console.log('games::runPostDownloadAction_PS3: Link created successfully');
   } catch (error) {
     console.error('games::runPostDownloadAction_PS3: Error running post download action for PS3:', error);
     throw error;
@@ -187,6 +214,29 @@ async function runPostDownloadAction_SwitchCitron(config, gameItem) {
   console.log('games::runPostDownloadAction_SwitchCitron: Running post download actions for Switch Citron');
 
   try {
+    const gameLocationFolderName = path.basename(gameItem.gameLocation);
+    console.log('games::runPostDownloadAction_SwitchCitron: Game Location Folder Name:', gameLocationFolderName);
+
+    const romLink = path.join(config.emulation.path, 'roms', 'switch', gameLocationFolderName);
+    console.log('games::runPostDownloadAction_SwitchCitron: ROM Link:', romLink);
+
+    const linkPointsTo = gameItem.realLocalGamePath;
+    console.log('games::runPostDownloadAction_SwitchCitron: Link Points To:', linkPointsTo);
+
+    try {
+      const stat = fs.lstatSync(romLink);
+      console.log('games::runPostDownloadAction_SwitchCitron: ROM Link Stats:', stat);
+
+      if (stat.isSymbolicLink()) {
+        console.log('games::runPostDownloadAction_SwitchCitron: ROM Link is a symlink, removing it');
+        fs.unlinkSync(romLink);
+      }
+    } catch (error) {
+      console.error('games::runPostDownloadAction_SwitchCitron: Error getting ROM link stats:', error);
+    }
+
+    fs.ensureSymlinkSync(linkPointsTo, romLink);
+    console.log('games::runPostDownloadAction_SwitchCitron: Link created successfully');
   } catch (error) {
     console.error('games::runPostDownloadAction_SwitchCitron: Error running post download action for Switch Citron:', error);
     throw error;
@@ -197,6 +247,29 @@ async function runPostDownloadAction_SwitchRyuJinX(config, gameItem) {
   console.log('games::runPostDownloadAction_SwitchRyuJinX: Running post download actions for Switch RyuJinX');
 
   try {
+    const gameLocationFolderName = path.basename(gameItem.gameLocation);
+    console.log('games::runPostDownloadAction_SwitchRyuJinX: Game Location Folder Name:', gameLocationFolderName);
+
+    const romLink = path.join(config.emulation.path, 'roms', 'switch', gameLocationFolderName);
+    console.log('games::runPostDownloadAction_SwitchRyuJinX: ROM Link:', romLink);
+
+    const linkPointsTo = gameItem.realLocalGamePath;
+    console.log('games::runPostDownloadAction_SwitchRyuJinX: Link Points To:', linkPointsTo);
+
+    try {
+      const stat = fs.lstatSync(romLink);
+      console.log('games::runPostDownloadAction_SwitchRyuJinX: ROM Link Stats:', stat);
+
+      if (stat.isSymbolicLink()) {
+        console.log('games::runPostDownloadAction_SwitchRyuJinX: ROM Link is a symlink, removing it');
+        fs.unlinkSync(romLink);
+      }
+    } catch (error) {
+      console.error('games::runPostDownloadAction_SwitchRyuJinX: Error getting ROM link stats:', error);
+    }
+
+    fs.ensureSymlinkSync(linkPointsTo, romLink);
+    console.log('games::runPostDownloadAction_SwitchRyuJinX: Link created successfully');
   } catch (error) {
     console.error('games::runPostDownloadAction_SwitchRyuJinX: Error running post download action for Switch RyuJinX:', error);
     throw error;
