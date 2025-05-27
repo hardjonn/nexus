@@ -19,6 +19,7 @@ const saveOptions = () => {
     remote_lib: toRaw(store.remote_lib),
     local_lib: toRaw(store.local_lib),
     port_proton: toRaw(store.port_proton),
+    emulation: toRaw(store.emulation),
   };
 
   saving.value = true;
@@ -276,6 +277,23 @@ const saveOptions = () => {
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Port Proton Path"
+          required
+        />
+      </div>
+    </div>
+
+    <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
+      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Emulation Settings</span>
+    </h2>
+    <div class="grid gap-6 mb-6 md:grid-cols-2">
+      <div>
+        <label for="emulation_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Emulation Path</label>
+        <input
+          id="emulation_path"
+          v-model="store.emulation.path"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Emulation Path"
           required
         />
       </div>

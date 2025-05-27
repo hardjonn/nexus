@@ -29,6 +29,9 @@ const defaultConfig = {
   port_proton: {
     path: '~/.var/app/ru.linux_gaming.PortProton',
   },
+  emulation: {
+    path: '~/Games/Emulation',
+  },
   app: {
     window_bounds: {
       x: 240,
@@ -140,6 +143,15 @@ const schema = {
         },
       },
     },
+    emulation: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          default: '~/Games/Emulation',
+        },
+      },
+    },
     app: {
       type: 'object',
       properties: {
@@ -182,6 +194,7 @@ function saveConfig(configData) {
   conf.set('remote_lib', configData.remote_lib);
   conf.set('local_lib', configData.local_lib);
   conf.set('port_proton', configData.port_proton);
+  conf.set('emulation', configData.emulation);
 
   return true;
 }
@@ -194,6 +207,7 @@ function getConfig() {
     remote_lib: conf.get('remote_lib'),
     local_lib: conf.get('local_lib'),
     port_proton: conf.get('port_proton'),
+    emulation: conf.get('emulation'),
     app: conf.get('app'),
   };
 }

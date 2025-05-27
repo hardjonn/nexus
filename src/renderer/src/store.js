@@ -30,6 +30,11 @@ const store = reactive({
     path: '',
   },
 
+  // emulation config
+  emulation: {
+    path: '',
+  },
+
   // local config
   local_lib: {
     games_path: 'Games',
@@ -55,6 +60,7 @@ window.confAPI.getConfig().then((config) => {
   store.steam = config.steam;
   store.remote_lib = config.remote_lib;
   store.port_proton = config.port_proton;
+  store.emulation = config.emulation;
   store.local_lib = config.local_lib;
   store.app = config.app;
 });
