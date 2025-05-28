@@ -37,7 +37,7 @@ const store = reactive({
 
   // local config
   local_lib: {
-    games_path: 'Games',
+    games_path: [{ label: 'SSD', path: 'Games' }],
     prefixes_path: '',
   },
 

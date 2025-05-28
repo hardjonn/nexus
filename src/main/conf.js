@@ -23,7 +23,7 @@ const defaultConfig = {
     default_prefixes: 'default',
   },
   local_lib: {
-    games_path: 'Games',
+    games_path: [{ label: 'SSD', path: 'Games' }],
     prefixes_path: '',
   },
   port_proton: {
@@ -125,8 +125,19 @@ const schema = {
       type: 'object',
       properties: {
         games_path: {
-          type: 'string',
-          default: 'Games',
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: {
+                type: 'string',
+              },
+              path: {
+                type: 'string',
+              },
+            },
+          },
+          default: [{ label: 'SSD', path: 'Games' }],
         },
         prefixes_path: {
           type: 'string',

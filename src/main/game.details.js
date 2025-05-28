@@ -330,19 +330,14 @@ function getRealLocalGamePath(gameLocation) {
     return null;
   }
 
-  if (!config.local_lib.games_path.trim()) {
+  if (!config.local_lib.games_path.length) {
     console.error('game.item::getRealLocalGamePath: Games lib path client config is not specified');
     return null;
   }
 
   try {
-    // get the list of all available/configured game libs locations
-    // they are being stored in the following format
-    // /path/to/game/lib;/another/path/to/game/lib;/and/so/on
-    const gamesLibPathList = config.local_lib.games_path.split(';');
-
-    for (const gamesLibPath of gamesLibPathList) {
-      const localGamePath = path.join(gamesLibPath, gameLocation);
+    for (const gamesLibPath of config.local_lib.games_path) {
+      const localGamePath = path.join(gamesLibPath.path, gameLocation);
       console.log('game.item::getRealLocalGamePath: Local Game Path:', localGamePath);
 
       if (fs.existsSync(localGamePath)) {

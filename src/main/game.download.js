@@ -51,7 +51,7 @@ async function getAvailableLibs(config, gameLocation) {
   try {
     console.log('games::getAvailableLibs: Getting local libs');
 
-    const gamesLibPathList = config.local_lib.games_path.split(';');
+    const gamesLibPathList = config.local_lib.games_path;
     console.log('games::getAvailableLibs: Local Libs:', gamesLibPathList);
 
     const disks = await nodeDiskInfo.getDiskInfo();
@@ -64,21 +64,22 @@ async function getAvailableLibs(config, gameLocation) {
       let matchedDisk = null;
 
       for (const disk of disks) {
-        if (libPath.startsWith(disk.mounted) && disk.mounted.length > maxMatchedLen) {
+        if (libPath.path.startsWith(disk.mounted) && disk.mounted.length > maxMatchedLen) {
           maxMatchedLen = disk.mounted.length;
           matchedDisk = disk;
         }
       }
 
       if (matchedDisk) {
-        console.log('games::getAvailableLibs: Matched disk for ' + libPath + ':', matchedDisk);
-        console.log('games::getAvailableLibs: Matched disk for ' + libPath + ':', matchedDisk.available);
-        console.log('games::getAvailableLibs: Matched disk for ' + libPath + ':', matchedDisk.capacity);
-        console.log('games::getAvailableLibs: Matched disk for ' + libPath + ':', matchedDisk.used);
+        console.log('games::getAvailableLibs: Matched disk for ' + libPath.path + ':', matchedDisk);
+        console.log('games::getAvailableLibs: Matched disk for ' + libPath.path + ':', matchedDisk.available);
+        console.log('games::getAvailableLibs: Matched disk for ' + libPath.path + ':', matchedDisk.capacity);
+        console.log('games::getAvailableLibs: Matched disk for ' + libPath.path + ':', matchedDisk.used);
         availableLibs.push({
-          path: libPath,
+          path: libPath.path,
+          label: libPath.label,
           diskInfo: matchedDisk,
-          downloadLocation: path.join(libPath, gameLocation),
+          downloadLocation: path.join(libPath.path, gameLocation),
         });
       }
     }

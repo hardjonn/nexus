@@ -248,17 +248,6 @@ const saveOptions = () => {
     </h2>
     <div class="grid gap-6 mb-6 md:grid-cols-2">
       <div>
-        <label for="local_games_lib_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Local Games Lib Path</label>
-        <input
-          id="local_games_lib_path"
-          v-model="store.local_lib.games_path"
-          type="text"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="Games"
-          required
-        />
-      </div>
-      <div>
         <label for="local_prefixes_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Local Prefixes Path</label>
         <input
           id="local_prefixes_path"
@@ -279,6 +268,47 @@ const saveOptions = () => {
           placeholder="Port Proton Path"
           required
         />
+      </div>
+    </div>
+
+    <div class="inline-flex items-center mb-4">
+      <h3 for="local_games_lib_path" class="block mb-2 flex-grow mr-4 text-2xl font-medium text-gray-900 dark:text-white">Local Games Lib Path</h3>
+      <button
+        type="button"
+        class="text-white w-16 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:bg-gradient-to-br dark:focus:ring-green-800 shadow-lg dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm py-2 text-center mb-2"
+        @click="store.local_lib.games_path.push({ label: '', path: '' })"
+      >
+        Add
+      </button>
+    </div>
+    <div v-for="(libPath, index) in store.local_lib.games_path" :key="index" class="grid gap-6 mb-6 grid-cols-[5fr_40fr_5fr_40fr_10fr]">
+      <span class="text-sm font-medium py-2.5 dark:text-white">Label:</span>
+      <input
+        :id="`local_games_lib_path_label-${index}`"
+        v-model="store.local_lib.games_path[index].label"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Label"
+        required
+      />
+      <span class="text-sm font-medium py-2.5 dark:text-white">Path:</span>
+      <input
+        :id="`local_games_lib_path_path-${index}`"
+        v-model="store.local_lib.games_path[index].path"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Path"
+        required
+      />
+      <div>
+        <button
+          v-if="store.local_lib.games_path.length > 1"
+          type="button"
+          class="text-white h-full w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="store.local_lib.games_path.splice(index, 1)"
+        >
+          Delete
+        </button>
       </div>
     </div>
 
