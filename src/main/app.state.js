@@ -60,6 +60,7 @@ function appState_mergeDbAndSteamGamesWithLocalGames(dbGamesMap, steamGamesMap) 
 
     localState: {
       downloading: null,
+      steamTitle: null,
     },
   };
 
@@ -95,6 +96,13 @@ function updateGameItemState(steamAppId, fieldsToUpdate) {
   if (!gamesMap[steamAppId]) {
     console.error('app.state::updateGameItemState: Game not found for steamAppId', steamAppId);
     throw new Error('Game not found for steamAppId ' + steamAppId);
+  }
+
+  if (fieldsToUpdate.localState) {
+    fieldsToUpdate.localState = {
+      ...gamesMap[steamAppId].localState,
+      ...fieldsToUpdate.localState,
+    };
   }
 
   gamesMap[steamAppId] = {
