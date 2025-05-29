@@ -14,6 +14,7 @@ import {
   deleteGameFromLocal,
   requestDownloadDetails,
   downloadGameFromRemote,
+  syncSteamState,
 } from './games';
 
 let progressCallback = null;
@@ -182,4 +183,9 @@ ipcMain.handle('games/item/request_download_details', async (event, steamAppId, 
 ipcMain.handle('games/item/download_from_remote', async (event, steamAppId, gameItem, prefixAlias, libPath) => {
   console.log('games/item/download_from_remote', steamAppId, gameItem, prefixAlias, libPath);
   return await downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath, progressCallback);
+});
+
+ipcMain.handle('games/item/sync_steam_state', async (event, steamAppId, gameItem) => {
+  console.log('games/item/sync_steam_state', steamAppId, gameItem);
+  return await syncSteamState(steamAppId, gameItem);
 });

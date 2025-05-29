@@ -38,6 +38,10 @@ function abortGameDownload(itemId) {
   return window.gamesAPI.abortGameDownload(itemId);
 }
 
+function syncSteamState(steamAppId, gameItem) {
+  return window.gamesAPI.syncSteamState(steamAppId, gameItem);
+}
+
 export {
   getGames,
   uploadIcon,
@@ -49,4 +53,5 @@ export {
   requestDownloadDetails,
   downloadGameFromRemote,
   abortGameDownload,
+  syncSteamState,
 };

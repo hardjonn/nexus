@@ -34,6 +34,7 @@ const gamesAPI = {
     electronAPI.ipcRenderer.invoke('games/item/download_from_remote', steamAppId, gameItem, prefixAlias, libPath),
   abortGameDownload: (steamAppId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', steamAppId),
   subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
+  syncSteamState: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/sync_steam_state', steamAppId, gameItem),
 };
 
 electronAPI.ipcRenderer.on('progress', (event, data) => {

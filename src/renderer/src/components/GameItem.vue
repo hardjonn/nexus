@@ -11,6 +11,7 @@ import {
   requestDownloadDetails,
   downloadGameFromRemote,
   abortGameDownload,
+  syncSteamState,
 } from '../games.js';
 
 const processingActions = {
@@ -26,6 +27,7 @@ const processingActions = {
   downloadingGameFromRemote: 'Downloading game from remote...',
   requestingDownloadDetails: 'Requesting download details...',
   abortingGameDownload: 'Aborting game download...',
+  syncSteamState: 'Syncing Steam state...',
 };
 
 const props = defineProps({
@@ -264,6 +266,10 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
+  if (isProcessingAction(processingActions.syncSteamState)) {
+    return false;
+  }
+
   return true;
 });
 
@@ -305,6 +311,10 @@ const shouldShowRefreshHashAndSizeButton = computed(() => {
   }
 
   if (isProcessingAction(processingActions.requestingDownloadDetails)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.syncSteamState)) {
     return false;
   }
 
@@ -353,6 +363,10 @@ const shouldShowDeleteGameFromLocalButton = computed(() => {
   }
 
   if (isProcessingAction(processingActions.requestingDownloadDetails)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.syncSteamState)) {
     return false;
   }
 
@@ -409,6 +423,58 @@ const shouldShowDownloadGameButton = computed(() => {
   }
 
   if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.syncSteamState)) {
+    return false;
+  }
+
+  return true;
+});
+
+const shouldShowSyncSteamStateButton = computed(() => {
+  if (data.gameItem.source === 'steam') {
+    return false;
+  }
+
+  if (data.gameItem.status !== 'ACTIVE') {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.editingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.savingGameItem)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.initGameDeletion)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.initGameDownload)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
+    return false;
+  }
+
+  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
     return false;
   }
 
@@ -791,6 +857,35 @@ async function onActionAbortDownloadGameFromRemote() {
   }
 }
 
+async function onActionSyncSteamState() {
+  activateProcessingAction(processingActions.syncSteamState);
+
+  const rawGameItem = makeRawGameItem();
+
+  try {
+    const response = await syncSteamState(data.gameItem.steamAppId, rawGameItem);
+
+    if (!response) {
+      data.errorMessage = 'Something went wrong while syncing the Steam state.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message || 'Something went wrong while syncing the Steam state.';
+      data.errors = response.error.errors;
+      return;
+    }
+
+    data.successMessage = 'Steam state synced successfully!';
+    emit('update-game-item', response.gameItem);
+  } catch (error) {
+    console.error('Error syncing the Steam state:', error);
+    data.errorMessage = 'An error occurred while syncing the Steam state:' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
 function makeRawGameItem() {
   const rawGameItem = toRaw(data.gameItem);
 
@@ -974,6 +1069,15 @@ function makeRawGameItem() {
         >
           {{ isProcessingAction(processingActions.requestingDownloadDetails) ? 'Requesting Download Details...' : 'Download Game' }}
         </button>
+
+        <button
+          v-if="shouldShowSyncSteamStateButton"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-stone-400 via-stone-500 to-stone-600 hover:bg-gradient-to-br dark:focus:ring-stone-800 dark:shadow-lg dark:shadow-stone-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center mb-2"
+          @click="onActionSyncSteamState"
+        >
+          {{ isProcessingAction(processingActions.syncSteamState) ? 'Syncing Steam State...' : 'Sync Steam State' }}
+        </button>
       </div>
     </div>
 
@@ -1034,7 +1138,7 @@ function makeRawGameItem() {
                   >
                     <div class="block">
                       <div class="w-full text-lg font-semibold inline-flex items-center justify-between mb-4">
-                        {{ lib.path }}
+                        {{ lib.path }} ({{ lib.label }})
                         <svg
                           v-if="libSelected === lib.path"
                           xmlns="http://www.w3.org/2000/svg"
@@ -1184,6 +1288,16 @@ function makeRawGameItem() {
           type="text"
           class="border text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
           :disabled="!isProcessingAction(processingActions.editingGameItem)"
+        />
+      </div>
+
+      <div class="grid gap-6 grid-cols-[20fr_80fr] mb-2">
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Title Local State:</span>
+        <input
+          v-model="data.gameItem.localState.steamTitle"
+          type="text"
+          class="border text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          disabled
         />
       </div>
 

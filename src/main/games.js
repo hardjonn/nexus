@@ -2,10 +2,10 @@ import path from 'node:path';
 import fs from 'fs-extra';
 
 import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData, db_updateGameState } from './game.queries';
-import { steam_getAllGamesMap } from './steam';
+import { steam_getAllGamesMap, steam_SyncStateForGame } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId, downloadWithRsync } from './transfer';
-import { setGamesMapState, updateGameItemState } from './app.state';
+import { updateGameItemState } from './app.state';
 import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
 import {
@@ -57,63 +57,6 @@ async function getGames() {
       },
     };
   }
-}
-
-async function augmentGameWithRealLocalGamePath(game) {
-  const config = getConfig();
-
-  // if the game is sourced from steam, it doesn't have
-  // the clientLocation and nasLocation
-  // so we need to skip it
-  if (game.source === 'steam') {
-    // console.log('Skipping game from steam:', game);
-    return game;
-  }
-
-  game.errors = [];
-
-  if (!config.client.games_lib_path.trim()) {
-    console.error('Games lib path client config is not specified');
-    game.errors.push({
-      message: 'Games lib path client config is not specified',
-    });
-    return game;
-  }
-
-  // get the list of all available/configured game libs locations
-  // they are being stored in the following format
-  // /path/to/game/lib;/another/path/to/game/lib;/and/so/on
-  const gameLibPathList = config.client.games_lib_path.split(';');
-
-  for (const localGamesLibPath of gameLibPathList) {
-    const localGamePath = path.join(localGamesLibPath, game.clientLocation);
-    console.log('Local Game Path:', localGamePath);
-
-    if (!fs.existsSync(localGamePath)) {
-      console.log('Game not found at the following location: ' + localGamePath);
-      continue; // Skip to the next disk if the path doesn't exist
-    }
-
-    console.log('Found local game path:', localGamePath);
-
-    game.realLocalGamePath = localGamePath;
-    break;
-  }
-
-  if (!game.prefixLocation) {
-    return game;
-  }
-
-  const localPrefixPath = path.join(config.client.prefixes_path, game.prefixLocation);
-  console.log('Local Prefix Path:', localPrefixPath);
-
-  if (!fs.existsSync(localPrefixPath)) {
-    return game;
-  }
-
-  game.realLocalPrefixPath = localPrefixPath;
-
-  return game;
 }
 
 async function calculateHashAndSize(steamAppId, inGameItem) {
@@ -223,11 +166,19 @@ async function saveGameItem(steamAppId, gameItem) {
     // and recalculate hash/size
     console.log('games::saveGameItem: SAVED GAME RESULT: ', savedGameItem);
 
-    const updatedGameItem = updateGameItemState(steamAppId, savedGameItem);
+    gameItem = updateGameItemState(steamAppId, savedGameItem);
+
+    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
+    console.log('games::saveGameItem: Updated title:', updatedTitle);
+
+    gameItem.localState.steamTitle = updatedTitle;
+    console.log('games::saveGameItem: Game item local state:', gameItem.localState);
+
+    gameItem = updateGameItemState(steamAppId, gameItem);
 
     return {
       status: 'success',
-      gameItem: updatedGameItem,
+      gameItem: gameItem,
     };
   } catch (error) {
     console.error('games::saveGameItem: Error saving game item:', error);
@@ -523,6 +474,14 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
       status: 'ACTIVE',
     });
 
+    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
+    console.log('games::uploadGameToRemote: Updated title:', updatedTitle);
+
+    gameItem.localState.steamTitle = updatedTitle;
+    console.log('games::uploadGameToRemote: Game item local state:', gameItem.localState);
+
+    gameItem = updateGameItemState(steamAppId, gameItem);
+
     return {
       status: 'success',
       message: 'Game item saved successfully',
@@ -681,14 +640,30 @@ async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath
     };
   }
 
-  gameItem.localState.downloading = null;
-  gameItem = updateGameItemState(steamAppId, gameItem);
+  try {
+    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
+    console.log('games::downloadGameFromRemote: Updated title:', updatedTitle);
 
-  return {
-    status: 'success',
-    message: 'Game downloaded successfully',
-    gameItem: gameItem,
-  };
+    gameItem.localState.downloading = null;
+    gameItem.localState.steamTitle = updatedTitle;
+    console.log('games::downloadGameFromRemote: Game item local state:', gameItem.localState);
+
+    gameItem = updateGameItemState(steamAppId, gameItem);
+
+    return {
+      status: 'success',
+      message: 'Game downloaded successfully',
+      gameItem: gameItem,
+    };
+  } catch (error) {
+    console.error('games::downloadGameFromRemote: Error syncing steam state:', error);
+    return {
+      status: 'error',
+      error: {
+        message: 'Failed to sync steam state: ' + error,
+      },
+    };
+  }
 }
 
 async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
@@ -744,8 +719,18 @@ async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
     }
   }
 
-  gameItem.localState.downloading = null;
-  gameItem = updateGameItemState(gameItem.steamAppId, gameItem);
+  try {
+    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
+    console.log('games::deleteGameFromLocal: Updated title:', updatedTitle);
+
+    gameItem.localState.downloading = null;
+    gameItem.localState.steamTitle = updatedTitle;
+    console.log('games::deleteGameFromLocal: Game item local state:', gameItem.localState);
+    gameItem = updateGameItemState(gameItem.steamAppId, gameItem);
+  } catch (error) {
+    console.error('games::deleteGameFromLocal: Error syncing steam state:', error);
+    errors.push('Failed to sync steam state: ' + error);
+  }
 
   return {
     status: 'success',
@@ -788,10 +773,57 @@ async function requestDownloadDetails(steamAppId, gameItem) {
   }
 }
 
+async function syncSteamState(steamAppId, gameItem) {
+  if (!gameItem) {
+    console.error('games::syncSteamState: Game item is not specified');
+    return {
+      status: 'error',
+      error: {
+        message: 'Game item is not specified',
+      },
+    };
+  }
+
+  try {
+    console.log('games::syncSteamState: Syncing steam state for game: ' + steamAppId);
+    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
+
+    console.log('games::syncSteamState: Updated title:', updatedTitle);
+    console.log('games::syncSteamState: Game item local state:', gameItem.localState);
+
+    gameItem.localState.steamTitle = updatedTitle;
+    gameItem = updateGameItemState(steamAppId, gameItem);
+
+    return {
+      status: 'success',
+      gameItem: gameItem,
+    };
+  } catch (error) {
+    console.error('games::syncSteamState: Error syncing steam state:', error);
+    return {
+      status: 'error',
+      error: {
+        message: 'Failed to sync steam state: ' + error,
+      },
+    };
+  }
+}
+
 function augmentOutputWithProgressId(output, steamAppId) {
   output.progressId = `steamAppId-${steamAppId}`;
 
   return output;
 }
 
-export { getGames, uploadIcon, saveGameItem, uploadGameToRemote, abortRsyncTransfer, calculateHashAndSize, deleteGameFromLocal, requestDownloadDetails, downloadGameFromRemote };
+export {
+  getGames,
+  uploadIcon,
+  saveGameItem,
+  uploadGameToRemote,
+  abortRsyncTransfer,
+  calculateHashAndSize,
+  deleteGameFromLocal,
+  requestDownloadDetails,
+  downloadGameFromRemote,
+  syncSteamState,
+};

@@ -8,9 +8,6 @@ const { NodeSSH } = require('node-ssh');
 
 import { getConfig } from './conf';
 
-// const drivelist = require('drivelist');
-// const nodeDiskInfo = require('node-disk-info');
-
 async function adjustedGameWithLocalAndRemoteDetails(game) {
   // if the game is sourced from steam, it doesn't have
   // the clientLocation and nasLocation
