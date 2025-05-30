@@ -115,4 +115,15 @@ function updateGameItemState(steamAppId, fieldsToUpdate) {
   return gamesMap[steamAppId];
 }
 
-export { getAppState_GamesMap, setAppState_GamesMap, updateGameItemState, appState_mergeDbAndSteamGamesWithLocalGames };
+function getGameItemState(steamAppId) {
+  const gamesMap = appState.get('gamesMap');
+
+  if (!gamesMap[steamAppId]) {
+    console.error('app.state::getGameItemState: Game not found for steamAppId', steamAppId);
+    throw new Error('Game not found for steamAppId ' + steamAppId);
+  }
+
+  return gamesMap[steamAppId];
+}
+
+export { getAppState_GamesMap, setAppState_GamesMap, updateGameItemState, appState_mergeDbAndSteamGamesWithLocalGames, getGameItemState };

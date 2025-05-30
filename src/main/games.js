@@ -1,11 +1,10 @@
-import path from 'node:path';
 import fs from 'fs-extra';
 
 import { db_getAllGamesMap, db_uploadIcon, db_updateGameItem, db_createGameItemFromSteamData, db_updateGameState } from './game.queries';
 import { steam_getAllGamesMap, steam_SyncStateForGame } from './steam';
 import { getConfig } from './conf';
 import { uploadWithRsync, abortRsyncTransferByItemId, downloadWithRsync } from './transfer';
-import { updateGameItemState } from './app.state';
+import { updateGameItemState, getGameItemState } from './app.state';
 import { appState_mergeDbAndSteamGamesWithLocalGames } from './app.state';
 import { makeIconFromPath, makeIconFromLoadedSteamIcon } from './game.icon';
 import {
@@ -138,6 +137,7 @@ async function createOrUpdateGameItem(steamAppId, gameItem) {
 async function saveGameItem(steamAppId, gameItem) {
   console.log('games::saveGameItem: Saving game item:', steamAppId, gameItem);
 
+  const prevGameItem = getGameItemState(steamAppId);
   try {
     const validationErrors = validateGameItem(gameItem);
     if (validationErrors.length) {
@@ -150,6 +150,13 @@ async function saveGameItem(steamAppId, gameItem) {
       };
     }
 
+    const updatedGameItem = await steam_SyncStateForGame(steamAppId, prevGameItem, gameItem);
+    console.log('games::saveGameItem: Updated game item:', updatedGameItem);
+
+    console.log('games::saveGameItem: Game item local state:', gameItem.localState);
+
+    gameItem = updateGameItemState(steamAppId, updatedGameItem);
+
     const savedGameItem = await createOrUpdateGameItem(steamAppId, gameItem);
 
     if (!savedGameItem) {
@@ -161,20 +168,6 @@ async function saveGameItem(steamAppId, gameItem) {
         },
       };
     }
-
-    // after game is saved we need to refresh all the data for it
-    // and recalculate hash/size
-    console.log('games::saveGameItem: SAVED GAME RESULT: ', savedGameItem);
-
-    gameItem = updateGameItemState(steamAppId, savedGameItem);
-
-    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
-    console.log('games::saveGameItem: Updated title:', updatedTitle);
-
-    gameItem.localState.steamTitle = updatedTitle;
-    console.log('games::saveGameItem: Game item local state:', gameItem.localState);
-
-    gameItem = updateGameItemState(steamAppId, gameItem);
 
     return {
       status: 'success',
@@ -270,6 +263,8 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
       },
     };
   }
+
+  const prevGameItem = getGameItemState(steamAppId);
 
   // 0. update the game state to uploading
   try {
@@ -474,13 +469,12 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
       status: 'ACTIVE',
     });
 
-    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
-    console.log('games::uploadGameToRemote: Updated title:', updatedTitle);
+    const updatedGameItem = await steam_SyncStateForGame(steamAppId, prevGameItem, gameItem);
+    console.log('games::uploadGameToRemote: Updated game item:', updatedGameItem);
 
-    gameItem.localState.steamTitle = updatedTitle;
     console.log('games::uploadGameToRemote: Game item local state:', gameItem.localState);
 
-    gameItem = updateGameItemState(steamAppId, gameItem);
+    gameItem = updateGameItemState(steamAppId, updatedGameItem);
 
     return {
       status: 'success',
@@ -532,6 +526,8 @@ async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath
 
   console.log('games::downloadGameFromRemote: prefixAlias: ' + prefixAlias);
   console.log('games::downloadGameFromRemote: libPath: ' + libPath);
+
+  const prevGameItem = getGameItemState(steamAppId);
 
   const config = getConfig();
 
@@ -641,14 +637,13 @@ async function downloadGameFromRemote(steamAppId, gameItem, prefixAlias, libPath
   }
 
   try {
-    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
-    console.log('games::downloadGameFromRemote: Updated title:', updatedTitle);
+    const updatedGameItem = await steam_SyncStateForGame(steamAppId, prevGameItem, gameItem);
+    console.log('games::downloadGameFromRemote: Updated game item:', updatedGameItem);
 
     gameItem.localState.downloading = null;
-    gameItem.localState.steamTitle = updatedTitle;
     console.log('games::downloadGameFromRemote: Game item local state:', gameItem.localState);
 
-    gameItem = updateGameItemState(steamAppId, gameItem);
+    gameItem = updateGameItemState(steamAppId, updatedGameItem);
 
     return {
       status: 'success',
@@ -678,6 +673,8 @@ async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
       },
     };
   }
+
+  const prevGameItem = getGameItemState(steamAppId);
 
   try {
     console.log('games::deleteGameFromLocal: Deleting game from local...');
@@ -720,13 +717,12 @@ async function deleteGameFromLocal(steamAppId, gameItem, deletePrefix) {
   }
 
   try {
-    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
-    console.log('games::deleteGameFromLocal: Updated title:', updatedTitle);
+    const updatedGameItem = await steam_SyncStateForGame(steamAppId, prevGameItem, gameItem);
+    console.log('games::deleteGameFromLocal: Updated game item:', updatedGameItem);
 
     gameItem.localState.downloading = null;
-    gameItem.localState.steamTitle = updatedTitle;
     console.log('games::deleteGameFromLocal: Game item local state:', gameItem.localState);
-    gameItem = updateGameItemState(gameItem.steamAppId, gameItem);
+    gameItem = updateGameItemState(gameItem.steamAppId, updatedGameItem);
   } catch (error) {
     console.error('games::deleteGameFromLocal: Error syncing steam state:', error);
     errors.push('Failed to sync steam state: ' + error);
@@ -784,15 +780,16 @@ async function syncSteamState(steamAppId, gameItem) {
     };
   }
 
+  const prevGameItem = getGameItemState(steamAppId);
+
   try {
     console.log('games::syncSteamState: Syncing steam state for game: ' + steamAppId);
-    const updatedTitle = await steam_SyncStateForGame(steamAppId, gameItem);
+    const updatedGameItem = await steam_SyncStateForGame(steamAppId, prevGameItem, gameItem);
 
-    console.log('games::syncSteamState: Updated title:', updatedTitle);
-    console.log('games::syncSteamState: Game item local state:', gameItem.localState);
+    console.log('games::syncSteamState: Updated game item:', updatedGameItem);
+    console.log('games::syncSteamState: Game item local state:', updatedGameItem.localState);
 
-    gameItem.localState.steamTitle = updatedTitle;
-    gameItem = updateGameItemState(steamAppId, gameItem);
+    gameItem = updateGameItemState(steamAppId, updatedGameItem);
 
     return {
       status: 'success',
