@@ -3,6 +3,7 @@ import Config from './components/Config.vue';
 import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
 import GamesList from './components/GamesList.vue';
+import Backup from './components/Backup.vue';
 </script>
 
 <template>
@@ -15,7 +16,7 @@ import GamesList from './components/GamesList.vue';
           <template #fallback> Loading games... </template>
         </Suspense>
       </Tab>
-      <Tab title="Local Game Library" name="local-game-lib"> not implemented yet </Tab>
+      <Tab title="Backup" name="backup"><Backup /></Tab>
     </Tabs>
   </div>
 </template>
