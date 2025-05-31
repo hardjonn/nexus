@@ -41,6 +41,12 @@ const store = reactive({
     prefixes_path: '',
   },
 
+  // backup config
+  backup: {
+    remote_location: '~/Backup/Location',
+    local_locations: [{ path: '~/Backup/Location', exclude: "{'*.txt','dir3','dir4'}", extra: '--dry-run' }],
+  },
+
   app: {
     active_tab: 'config',
   },
@@ -62,6 +68,7 @@ window.confAPI.getConfig().then((config) => {
   store.port_proton = config.port_proton;
   store.emulation = config.emulation;
   store.local_lib = config.local_lib;
+  store.backup = config.backup;
   store.app = config.app;
 });
 

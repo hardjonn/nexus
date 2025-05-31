@@ -18,6 +18,7 @@ const saveOptions = () => {
     steam: toRaw(store.steam),
     remote_lib: toRaw(store.remote_lib),
     local_lib: toRaw(store.local_lib),
+    backup: toRaw(store.backup),
     port_proton: toRaw(store.port_proton),
     emulation: toRaw(store.emulation),
   };
@@ -326,6 +327,70 @@ const saveOptions = () => {
           placeholder="Emulation Path"
           required
         />
+      </div>
+    </div>
+
+    <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
+      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Backup Settings</span>
+    </h2>
+    <div class="grid gap-6 mb-6 md:grid-cols-2">
+      <div>
+        <label for="remote_location" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Location</label>
+        <input
+          id="remote_location"
+          v-model="store.backup.remote_location"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Remote Location"
+          required
+        />
+      </div>
+    </div>
+
+    <div class="inline-flex items-center mb-4">
+      <h3 for="local_games_lib_path" class="block mb-2 flex-grow mr-4 text-2xl font-medium text-gray-900 dark:text-white">Local Backup Locations</h3>
+      <button
+        type="button"
+        class="text-white w-16 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:bg-gradient-to-br dark:focus:ring-green-800 shadow-lg dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm py-2 text-center mb-2"
+        @click="store.backup.local_locations.push({ path: '', exclude: '{\'*.iso\',\'*.log\',\'.ps3dir\'}', extra: '--dry-run' })"
+      >
+        Add
+      </button>
+    </div>
+    <div v-for="(backupLocation, index) in store.backup.local_locations" :key="index" class="grid gap-6 mb-6 grid-cols-[5fr_25fr_5fr_25fr_5fr_25fr_10fr]">
+      <span class="text-sm font-medium py-2.5 dark:text-white">Path:</span>
+      <input
+        :id="`backup_location_path-${index}`"
+        v-model="store.backup.local_locations[index].path"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Path"
+        required
+      />
+      <span class="text-sm font-medium py-2.5 dark:text-white">Exclude:</span>
+      <input
+        :id="`backup_location_exclude-${index}`"
+        v-model="store.backup.local_locations[index].exclude"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Exclude"
+      />
+      <span class="text-sm font-medium py-2.5 dark:text-white">Extra:</span>
+      <input
+        :id="`backup_location_extra-${index}`"
+        v-model="store.backup.local_locations[index].extra"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Extra"
+      />
+      <div>
+        <button
+          type="button"
+          class="text-white h-full w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="store.backup.local_locations.splice(index, 1)"
+        >
+          Delete
+        </button>
       </div>
     </div>
 

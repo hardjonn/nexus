@@ -32,6 +32,10 @@ const defaultConfig = {
   emulation: {
     path: '~/Games/Emulation',
   },
+  backup: {
+    remote_location: '~/Backup/Location',
+    local_locations: [{ path: '~/Backup/Location', exclude: "{'*.txt','dir3','dir4'}", extra: '--dry-run' }],
+  },
   app: {
     window_bounds: {
       x: 240,
@@ -163,6 +167,33 @@ const schema = {
         },
       },
     },
+    backup: {
+      type: 'object',
+      properties: {
+        remote_location: {
+          type: 'string',
+          default: '~/Backup/Location',
+        },
+        local_locations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              path: {
+                type: 'string',
+              },
+              exclude: {
+                type: 'string',
+              },
+              extra: {
+                type: 'string',
+              },
+            },
+          },
+          default: [{ path: '~/Backup/Location', exclude: "{'*.txt','dir3','dir4'}", extra: '--dry-run' }],
+        },
+      },
+    },
     app: {
       type: 'object',
       properties: {
@@ -206,6 +237,7 @@ function saveConfig(configData) {
   conf.set('local_lib', configData.local_lib);
   conf.set('port_proton', configData.port_proton);
   conf.set('emulation', configData.emulation);
+  conf.set('backup', configData.backup);
 
   return true;
 }
@@ -219,6 +251,7 @@ function getConfig() {
     local_lib: conf.get('local_lib'),
     port_proton: conf.get('port_proton'),
     emulation: conf.get('emulation'),
+    backup: conf.get('backup'),
     app: conf.get('app'),
   };
 }
