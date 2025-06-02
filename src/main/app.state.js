@@ -84,7 +84,7 @@ function appState_mergeDbAndSteamGamesWithLocalGames(dbGamesMap, steamGamesMap) 
     };
   }
 
-  console.log('app.state::appState_mergeDbAndSteamGamesWithLocalGames: final games map', finalGamesMap);
+  // console.log('app.state::appState_mergeDbAndSteamGamesWithLocalGames: final games map', finalGamesMap);
 
   setAppState_GamesMap(finalGamesMap);
   return finalGamesMap;

@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
+import { backupPrefixes, backupCustomLocation, abortBackupTransfer, backupAllCustomLocations } from './backup';
 import {
   getGames,
   uploadIcon,
@@ -188,4 +189,24 @@ ipcMain.handle('games/item/download_from_remote', async (event, steamAppId, game
 ipcMain.handle('games/item/sync_steam_state', async (event, steamAppId, gameItem) => {
   console.log('games/item/sync_steam_state', steamAppId, gameItem);
   return await syncSteamState(steamAppId, gameItem);
+});
+
+ipcMain.handle('backup/prefixes', async (event) => {
+  console.log('backup/prefixes');
+  return await backupPrefixes(progressCallback);
+});
+
+ipcMain.handle('backup/custom_location', async (event, location) => {
+  console.log('backup/custom_location', location);
+  return await backupCustomLocation(location, progressCallback);
+});
+
+ipcMain.handle('backup/all_custom_locations', async (event) => {
+  console.log('backup/all_custom_locations');
+  return await backupAllCustomLocations(progressCallback);
+});
+
+ipcMain.handle('backup/abort_backup_transfer', async (event, abortId) => {
+  console.log('backup/abort_backup_transfer', abortId);
+  return await abortBackupTransfer(abortId);
 });

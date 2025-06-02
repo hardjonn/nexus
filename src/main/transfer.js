@@ -41,7 +41,7 @@ async function abortRsyncTransferByItemId(itemId) {
  * @param {function(string, number): void} [options.onProgress] - Optional callback for progress updates with percentage.
  * @returns {Promise<void>}
  */
-async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, username, privateKeyPath, onProgress }) {
+async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, username, privateKeyPath, exclude, extra, onProgress }) {
   // first try to create the remote directory
   // if it fails, reject the promise
   // if it succeeds, continue
@@ -80,7 +80,20 @@ async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, use
       'ServerAliveInterval=10',
     ].join(' ');
 
-    const rsyncArguments = ['-avzh', '--delete', '--info=progress2', '--safe-links', '-e', sshCommand, sourcePathWithTrailingSlash, destinationPathWithTrailingSlash];
+    const rsyncArguments = ['-avzh', '--delete', '--info=progress2', '--safe-links'];
+
+    if (exclude) {
+      const excludeList = exclude.split(';');
+      for (const excludeItem of excludeList) {
+        rsyncArguments.push('--exclude', excludeItem);
+      }
+    }
+
+    if (extra) {
+      rsyncArguments.push(extra);
+    }
+
+    rsyncArguments.push('-e', sshCommand, sourcePathWithTrailingSlash, destinationPathWithTrailingSlash);
 
     const controller = new AbortController();
     abortControllers.set(abortId, controller);

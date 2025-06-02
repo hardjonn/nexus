@@ -5,6 +5,7 @@ import { electronAPI } from '@electron-toolkit/preload';
 const progressObservers = [];
 
 function addObserverToProgress(progressObserver) {
+  console.log('progress observers list', progressObservers);
   progressObservers.push(progressObserver);
 }
 
@@ -37,6 +38,14 @@ const gamesAPI = {
   syncSteamState: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/sync_steam_state', steamAppId, gameItem),
 };
 
+const backupAPI = {
+  backupPrefixes: () => electronAPI.ipcRenderer.invoke('backup/prefixes'),
+  backupCustomLocation: (location) => electronAPI.ipcRenderer.invoke('backup/custom_location', location),
+  backupAllCustomLocations: () => electronAPI.ipcRenderer.invoke('backup/all_custom_locations'),
+  abortPrefixesBackupUpload: () => electronAPI.ipcRenderer.invoke('backup/abort_backup_transfer', 'backup'),
+  abortCustomBackupUpload: () => electronAPI.ipcRenderer.invoke('backup/abort_backup_transfer', 'backup'),
+};
+
 electronAPI.ipcRenderer.on('progress', (event, data) => {
   console.log('progress', data);
   notifyProgressObservers(data);
@@ -51,6 +60,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('api', api);
     contextBridge.exposeInMainWorld('confAPI', confAPI);
     contextBridge.exposeInMainWorld('gamesAPI', gamesAPI);
+    contextBridge.exposeInMainWorld('backupAPI', backupAPI);
   } catch (error) {
     console.error(error);
   }
@@ -59,4 +69,5 @@ if (process.contextIsolated) {
   window.api = api;
   window.confAPI = confAPI;
   window.gamesAPI = gamesAPI;
+  window.backupAPI = backupAPI;
 }
