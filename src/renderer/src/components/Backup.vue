@@ -232,18 +232,18 @@ const customBackupFullRemotePath = computed(() => {
         </div>
       </div>
 
-      <div class="grid gap-6 mb-6 grid-cols-[30fr_70fr] dark:text-white">
+      <div class="grid gap-6 mb-6 grid-cols-[25fr_75fr] dark:text-white w-full">
         <div class="font-bold">Current steam user:</div>
-        <div class="p-2.5 dark:bg-gray-700 dark:text-white">{{ store.steam.user_name }}</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="store.steam.user_name" />
 
         <div class="font-bold">Remote Prefixes Location:</div>
-        <div class="p-2.5 dark:bg-gray-700 dark:text-white">{{ store.remote_lib.prefixes_path }}</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="store.remote_lib.prefixes_path" />
 
         <div class="font-bold">Full Remote Path:</div>
-        <div class="p-2.5 dark:bg-gray-700 dark:text-white">{{ fullRemotePath }}</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="fullRemotePath" />
 
         <div class="font-bold">Full Local Path</div>
-        <div class="p-2.5 dark:bg-gray-700 dark:text-white">{{ store.local_lib.prefixes_path }}</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="store.local_lib.prefixes_path" />
       </div>
     </div>
 
@@ -273,22 +273,22 @@ const customBackupFullRemotePath = computed(() => {
         </div>
       </div>
 
-      <div class="mb-8">
-        <span class="font-bold py-2.5 dark:text-white mr-4">Remote Backup Location:</span>
-        <span class="p-2.5 dark:bg-gray-700 dark:text-white">{{ customBackupFullRemotePath }}</span>
+      <div class="grid gap-6 mb-6 grid-cols-[25fr_75fr] dark:text-white w-full">
+        <span class="font-bold py-2.5 dark:text-white">Remote Backup Location:</span>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="customBackupFullRemotePath" />
       </div>
 
       <h4 class="block mb-2 flex-grow text-xl font-medium dark:text-white mb-8">Custom Backup Locations</h4>
 
-      <div v-for="(backupLocation, index) in store.backup.local_locations" :key="index" class="grid gap-6 mb-6 grid-cols-[5fr_25fr_5fr_25fr_5fr_25fr_10fr]">
+      <div v-for="(backupLocation, index) in store.backup.local_locations" :key="index" class="grid gap-6 mb-6 grid-cols-[5fr_35fr_5fr_30fr_5fr_10fr_10fr]">
         <span class="font-bold py-2.5 dark:text-white">Path:</span>
-        <span class="block w-full p-2.5 dark:bg-gray-700 dark:text-white">{{ store.backup.local_locations[index].path }}</span>
+        <input class="block w-full p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="store.backup.local_locations[index].path" />
 
         <span class="font-bold py-2.5 dark:text-white">Exclude:</span>
-        <span class="block w-full p-2.5 dark:bg-gray-700 dark:text-white">{{ store.backup.local_locations[index].exclude }}</span>
+        <input class="block w-full p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="store.backup.local_locations[index].exclude" />
 
         <span class="font-bold py-2.5 dark:text-white">Extra:</span>
-        <span class="block w-full p-2.5 dark:bg-gray-700 dark:text-white">{{ store.backup.local_locations[index].extra }}</span>
+        <input class="block w-full p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="store.backup.local_locations[index].extra" />
 
         <div>
           <button
