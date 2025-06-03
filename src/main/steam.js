@@ -8,7 +8,7 @@ import { getConfig } from './conf';
 async function steam_getAllGamesMap() {
   try {
     const shortcutsPath = getVdfShortcutsFullPath();
-    console.log('Shortcuts Path:', shortcutsPath);
+    console.log('steam::steam_getAllGamesMap: Shortcuts Path:', shortcutsPath);
 
     const inBuffer = await fs.readFile(shortcutsPath);
     const shortcutsData = readVdf(inBuffer);
@@ -26,7 +26,7 @@ async function steam_getAllGamesMap() {
 
     return gamesMap;
   } catch (error) {
-    console.error('steam_getAllGamesMap: Error fetching games:', error);
+    console.error('steam::steam_getAllGamesMap: Error fetching games:', error);
     throw error;
   }
 }
@@ -45,101 +45,42 @@ function getVdfShortcutsFullPath() {
 
 async function steam_SyncStateForGame(steamAppId, prevGameItem, gameItem) {
   if (gameItem.source === 'steam') {
-    console.log('steam_SyncStateForGame: Game is from Steam, skipping sync');
+    console.log('steam::steam_SyncStateForGame: Game is from Steam, skipping sync');
     return gameItem;
   }
 
   if (gameItem.status !== 'ACTIVE') {
-    console.log('steam_SyncStateForGame: Game is not in ACTIVE state, skipping sync');
+    console.log('steam::steam_SyncStateForGame: Game is not in ACTIVE state, skipping sync');
     return gameItem;
   }
 
   try {
-    console.log('steam_SyncStateForGame: Syncing state for game: ' + steamAppId);
+    console.log('steam::steam_SyncStateForGame: Syncing state for game: ' + steamAppId);
 
     const title = await makeSteamTitle(gameItem);
     gameItem.localState.steamTitle = title;
 
     if (prevGameItem.launcher !== gameItem.launcher) {
-      console.log('steam_SyncStateForGame: Launcher changed, updating Steam shortcut');
+      console.log('steam::steam_SyncStateForGame: Launcher changed, updating Steam shortcut');
       const { exeTarget, startDir, launchArgs } = await makeLaunchDetails(gameItem);
 
-      console.log('steam_SyncStateForGame: Exe Target:', exeTarget);
-      console.log('steam_SyncStateForGame: Start Dir:', startDir);
-      console.log('steam_SyncStateForGame: Launch Args:', launchArgs);
+      console.log('steam::steam_SyncStateForGame: Exe Target:', exeTarget);
+      console.log('steam::steam_SyncStateForGame: Start Dir:', startDir);
+      console.log('steam::steam_SyncStateForGame: Launch Args:', launchArgs);
 
       gameItem.steamExeTarget = exeTarget;
       gameItem.steamStartDir = startDir;
       gameItem.steamLaunchArgs = launchArgs;
     }
 
-    if (shortcutNeedsUpdate(prevGameItem, gameItem)) {
-      console.log('steam_SyncStateForGame: Shortcut needs update, updating Steam shortcut');
-      await updateSteamShortcut(gameItem);
-    }
+    console.log('steam::steam_SyncStateForGame: Updating Steam shortcut if needed or creating a new one');
+    await tryToUpdateSteamShortcut(gameItem);
 
     return gameItem;
   } catch (error) {
-    console.error('steam_updateSteamState: Error updating steam state:', error);
+    console.error('steam::steam_SyncStateForGame: Error updating steam state:', error);
     throw error;
   }
-}
-
-function shortcutNeedsUpdate(prevGameItem, gameItem) {
-  if (prevGameItem.localState.steamTitle !== gameItem.localState.steamTitle) {
-    console.log('steam::shortcutNeedsUpdate: Title changed, updating Steam shortcut');
-    return true;
-  }
-
-  if (prevGameItem.steamExeTarget !== gameItem.steamExeTarget) {
-    console.log('steam::shortcutNeedsUpdate: Exe Target changed, updating Steam shortcut');
-    return true;
-  }
-
-  if (prevGameItem.steamStartDir !== gameItem.steamStartDir) {
-    console.log('steam::shortcutNeedsUpdate: Start Dir changed, updating Steam shortcut');
-    return true;
-  }
-
-  if (prevGameItem.steamLaunchArgs !== gameItem.steamLaunchArgs) {
-    console.log('steam::shortcutNeedsUpdate: Launch Args changed, updating Steam shortcut');
-    return true;
-  }
-
-  if (gameMissingInSteamShortcuts(gameItem)) {
-    console.log('steam::shortcutNeedsUpdate: Game missing in Steam shortcuts, updating Steam shortcut');
-    return true;
-  }
-
-  console.log('steam::shortcutNeedsUpdate: No changes detected, skipping update');
-  return false;
-}
-
-function gameMissingInSteamShortcuts(gameItem) {
-  console.log('steam::gameMissingInSteamShortcuts: Updating game:', gameItem);
-  const shortcutsPath = getVdfShortcutsFullPath();
-  console.log('steam::gameMissingInSteamShortcutsPath:', shortcutsPath);
-
-  if (!fs.existsSync(shortcutsPath)) {
-    console.error('steam::gameMissingInSteamShortcuts: Shortcuts file does not exist:', shortcutsPath);
-    throw new Error('Shortcuts file does not exist: ' + shortcutsPath);
-  }
-
-  const inBuffer = fs.readFileSync(shortcutsPath);
-  const shortcutsData = readVdf(inBuffer);
-
-  console.log('steam::gameMissingInSteamShortcuts: Shortcuts data:', shortcutsData);
-
-  for (const key of Object.keys(shortcutsData['shortcuts'])) {
-    const shortcut = shortcutsData['shortcuts'][key];
-
-    if (shortcut['appid'] == gameItem.steamAppId || shortcut['AppId'] == gameItem.steamAppId) {
-      console.log('steam::gameMissingInSteamShortcuts: Found matching shortcut:', shortcut);
-      return false;
-    }
-  }
-
-  return true;
 }
 
 async function makeLaunchDetails(gameItem) {
@@ -259,11 +200,11 @@ async function makeSteamTitle(gameItem) {
   // if the game is not present locally, then it's not installed
   // and cannot be launched, thus mark it in Steam with appropriate state
   if (!isGamePresentLocally) {
-    console.log('makeSteamTitle: Game is not installed locally, marking as absent');
+    console.log('steam::makeSteamTitle: Game is not installed locally, marking as absent');
     return makeAbsentTitle(gameItem);
   }
 
-  console.log('makeSteamTitle: Game is installed locally, marking as present');
+  console.log('steam::makeSteamTitle: Game is installed locally, marking as present');
   return makePresentTitle(gameItem);
 }
 
@@ -289,21 +230,21 @@ function makePresentTitle(gameItem) {
   return `✅ ${gameItem.steamTitle} [${libLabel}] [${gameItem.launcher}]`;
 }
 
-async function updateSteamShortcut(gameItem) {
+async function tryToUpdateSteamShortcut(gameItem) {
   try {
-    console.log('steam_updateSteamShortcut: Updating game:', gameItem);
+    console.log('steam::tryToUpdateSteamShortcut: Updating game:', gameItem);
     const shortcutsPath = getVdfShortcutsFullPath();
-    console.log('Shortcuts Path:', shortcutsPath);
+    console.log('steam::tryToUpdateSteamShortcut: Shortcuts Path:', shortcutsPath);
 
     if (!fs.existsSync(shortcutsPath)) {
-      console.error('steam_updateSteamShortcut: Shortcuts file does not exist:', shortcutsPath);
+      console.error('steam::tryToUpdateSteamShortcut: Shortcuts file does not exist:', shortcutsPath);
       throw new Error('Shortcuts file does not exist: ' + shortcutsPath);
     }
 
     // once we confirmed the file exists we need to makes a backup of it
     const backupPath = shortcutsPath + '.' + Date.now() + '.bak';
     await fs.copy(shortcutsPath, backupPath);
-    console.log('steam_updateSteamShortcut: Backup created:', backupPath);
+    console.log('steam::tryToUpdateSteamShortcut: Backup created:', backupPath);
 
     const inBuffer = await fs.readFile(shortcutsPath);
     const shortcutsData = readVdf(inBuffer);
@@ -311,59 +252,57 @@ async function updateSteamShortcut(gameItem) {
     let hadChanges = false;
     let foundInDataSet = false;
 
-    console.log('steam_updateSteamShortcut: Shortcuts Data:', shortcutsData);
-
     for (const key of Object.keys(shortcutsData['shortcuts'])) {
       const shortcut = shortcutsData['shortcuts'][key];
 
       if (shortcut['appid'] == gameItem.steamAppId || shortcut['AppId'] == gameItem.steamAppId) {
-        console.log('steam_updateSteamShortcut: Found matching shortcut:', shortcut);
+        console.log('steam::tryToUpdateSteamShortcut: Found matching shortcut:', shortcut);
         foundInDataSet = true;
 
-        if (shortcut['appname'] && shortcut['appname'] !== gameItem.steamTitle) {
-          console.log('steam_updateSteamShortcut: Updated appname from', shortcut['appname'], 'to', gameItem.steamTitle);
-          shortcutsData['shortcuts'][key]['appname'] = gameItem.steamTitle;
+        if (shortcut['appname'] && shortcut['appname'] !== gameItem.localState.steamTitle) {
+          console.log('steam::tryToUpdateSteamShortcut: Updated appname from', shortcut['appname'], 'to', gameItem.localState.steamTitle);
+          shortcutsData['shortcuts'][key]['appname'] = gameItem.localState.steamTitle;
           hadChanges = true;
         }
 
-        if (shortcut['AppName'] && shortcut['AppName'] !== gameItem.steamTitle) {
-          console.log('steam_updateSteamShortcut: Updated AppName from', shortcut['AppName'], 'to', gameItem.steamTitle);
-          shortcutsData['shortcuts'][key]['AppName'] = gameItem.steamTitle;
+        if (shortcut['AppName'] && shortcut['AppName'] !== gameItem.localState.steamTitle) {
+          console.log('steam::tryToUpdateSteamShortcut: Updated AppName from', shortcut['AppName'], 'to', gameItem.localState.steamTitle);
+          shortcutsData['shortcuts'][key]['AppName'] = gameItem.localState.steamTitle;
           hadChanges = true;
         }
 
         if (shortcut['exe'] && shortcut['exe'] !== gameItem.steamExeTarget) {
-          console.log('steam_updateSteamShortcut: Updated exe from', shortcut['exe'], 'to', gameItem.steamExeTarget);
+          console.log('steam::tryToUpdateSteamShortcut: Updated exe from', shortcut['exe'], 'to', gameItem.steamExeTarget);
           shortcutsData['shortcuts'][key]['exe'] = gameItem.steamExeTarget;
           hadChanges = true;
         }
 
         if (shortcut['Exe'] && shortcut['Exe'] !== gameItem.steamExeTarget) {
-          console.log('steam_updateSteamShortcut: Updated Exe from', shortcut['Exe'], 'to', gameItem.steamExeTarget);
+          console.log('steam::tryToUpdateSteamShortcut: Updated Exe from', shortcut['Exe'], 'to', gameItem.steamExeTarget);
           shortcutsData['shortcuts'][key]['Exe'] = gameItem.steamExeTarget;
           hadChanges = true;
         }
 
         if (shortcut['startdir'] && shortcut['startdir'] !== gameItem.steamStartDir) {
-          console.log('steam_updateSteamShortcut: Updated startdir from', shortcut['startdir'], 'to', gameItem.steamStartDir);
+          console.log('steam::tryToUpdateSteamShortcut: Updated startdir from', shortcut['startdir'], 'to', gameItem.steamStartDir);
           shortcutsData['shortcuts'][key]['startdir'] = gameItem.steamStartDir;
           hadChanges = true;
         }
 
         if (shortcut['StartDir'] && shortcut['StartDir'] !== gameItem.steamStartDir) {
-          console.log('steam_updateSteamShortcut: Updated StartDir from', shortcut['StartDir'], 'to', gameItem.steamStartDir);
+          console.log('steam::tryToUpdateSteamShortcut: Updated StartDir from', shortcut['StartDir'], 'to', gameItem.steamStartDir);
           shortcutsData['shortcuts'][key]['StartDir'] = gameItem.steamStartDir;
           hadChanges = true;
         }
 
         if (shortcut['launchoptions'] && shortcut['launchoptions'] !== gameItem.steamLaunchArgs) {
-          console.log('steam_updateSteamShortcut: Updated launchoptions from', shortcut['launchoptions'], 'to', gameItem.steamLaunchArgs);
+          console.log('steam::tryToUpdateSteamShortcut: Updated launchoptions from', shortcut['launchoptions'], 'to', gameItem.steamLaunchArgs);
           shortcutsData['shortcuts'][key]['launchoptions'] = gameItem.steamLaunchArgs;
           hadChanges = true;
         }
 
         if (shortcut['LaunchOptions'] && shortcut['LaunchOptions'] !== gameItem.steamLaunchArgs) {
-          console.log('steam_updateSteamShortcut: Updated LaunchOptions from', shortcut['LaunchOptions'], 'to', gameItem.steamLaunchArgs);
+          console.log('steam::tryToUpdateSteamShortcut: Updated LaunchOptions from', shortcut['LaunchOptions'], 'to', gameItem.steamLaunchArgs);
           shortcutsData['shortcuts'][key]['LaunchOptions'] = gameItem.steamLaunchArgs;
           hadChanges = true;
         }
@@ -373,11 +312,11 @@ async function updateSteamShortcut(gameItem) {
     }
 
     if (!foundInDataSet) {
-      console.log('steam_updateSteamShortcut: Game not found in shortcuts file, adding...');
-      console.log('steam_updateSteamShortcut: Last Key:', Object.keys(shortcutsData['shortcuts']).length);
+      console.log('steam::tryToUpdateSteamShortcut: Game not found in shortcuts file, adding...');
+      console.log('steam::tryToUpdateSteamShortcut: New Key:', Object.keys(shortcutsData['shortcuts']).length);
       shortcutsData['shortcuts'][Object.keys(shortcutsData['shortcuts']).length] = {
         appid: gameItem.steamAppId,
-        AppName: gameItem.steamTitle,
+        AppName: gameItem.localState.steamTitle,
         exe: gameItem.steamExeTarget,
         StartDir: gameItem.steamStartDir,
         LaunchOptions: gameItem.steamLaunchArgs,
@@ -386,12 +325,12 @@ async function updateSteamShortcut(gameItem) {
     }
 
     if (hadChanges) {
-      console.log('steam_updateSteamShortcut: Saving changes to shortcuts file...');
+      console.log('steam::tryToUpdateSteamShortcut: Saving changes to shortcuts file...');
       const outBuffer = writeVdf(shortcutsData);
       await fs.writeFile(shortcutsPath, outBuffer);
     }
   } catch (error) {
-    console.error('steam_updateSteamShortcut: Error updating game shortcut:', error);
+    console.error('steam::tryToUpdateSteamShortcut: Error updating game shortcut:', error);
     throw error;
   }
 }
