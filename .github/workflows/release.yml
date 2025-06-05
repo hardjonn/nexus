@@ -12,9 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    outputs:
-      new_version: ${{ steps.get_version.outputs.version }}
-      version_changed: ${{ steps.compare_version.outputs.changed }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
