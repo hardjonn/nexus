@@ -3,7 +3,7 @@
   "version": "0.1.7",
   "description": "Nexus - Steam Games Manager",
   "main": "./out/main/index.js",
-  "author": "jonnhard",
+  "author": "hardjonn",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
