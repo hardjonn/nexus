@@ -52,7 +52,10 @@
     "linux": {
       "target": "appimage",
       "icon": "build/icon.png",
-      "category": "Games"
+      "category": "Games",
+      "publish": [
+        "github"
+      ]
     }
   }
 }

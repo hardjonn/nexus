@@ -1,0 +1,44 @@
+name: Build and Upload Release Artifact
+
+on:
+  workflow_dispatch: # Allows manual trigger for testing
+  release:
+    types: [prereleased] # Triggers when a draft release is created or updated
+
+jobs:
+  build_and_upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0' # Or your desired Node.js version
+
+      - name: Get current app version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci # Use npm ci for clean installs in CI environments
+
+      - name: Build artifact
+        run: npm run build:linux
+
+      - name: Archive production build
+        run: zip -r app-build-${{ steps.get_version.outputs.version }}.zip dist/
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }} # The tag associated with the draft release
+          files: |
+            app-build-${{ steps.get_version.outputs.version }}.zip
+            dist/latest-linux.yml
+            dist/nexus-${{ steps.get_version.outputs.version }}.AppImage
+          update_release: true # Important: update the existing draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
