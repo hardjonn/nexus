@@ -1,4 +1,4 @@
-name: Check Version and Create Release Draft
+name: Release
 
 on:
   push:
@@ -8,8 +8,10 @@ on:
       - 'package.json'
 
 jobs:
-  check_version:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       new_version: ${{ steps.get_version.outputs.version }}
       version_changed: ${{ steps.compare_version.outputs.changed }}
