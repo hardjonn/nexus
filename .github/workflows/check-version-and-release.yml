@@ -72,7 +72,7 @@ jobs:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
           draft: true # Important: create as a draft
-          prerelease: false
+          prerelease: true
           body: |
             This is a draft release for version ${{ steps.get_version.outputs.version }}.
             Assets will be uploaded in a subsequent workflow.

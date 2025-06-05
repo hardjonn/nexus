@@ -8,6 +8,8 @@ on:
 jobs:
   build_and_upload:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,6 +28,8 @@ jobs:
 
       - name: Build artifact
         run: npm run build:linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Archive production build
         run: zip -r app-build-${{ steps.get_version.outputs.version }}.zip dist/
