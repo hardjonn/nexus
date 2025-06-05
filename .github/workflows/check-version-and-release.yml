@@ -1,0 +1,78 @@
+name: Check Version and Create Release Draft
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check_version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.get_version.outputs.version }}
+      version_changed: ${{ steps.compare_version.outputs.changed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed to compare package.json with previous commit
+
+      - name: Get current app version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Get previous package.json from history
+        id: get_previous_package_json
+        run: |
+          git show HEAD~1:package.json > previous_package.json || true
+
+      - name: Get previous app version
+        id: get_previous_version
+        run: |
+          if [ -f previous_package.json ]; then
+            PREVIOUS_VERSION=$(node -p "require('./previous_package.json').version")
+            echo "previous_version=$PREVIOUS_VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "previous_version=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compare versions
+        id: compare_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
+          PREVIOUS_VERSION="${{ steps.get_previous_version.outputs.previous_version }}"
+          echo "Current version: $CURRENT_VERSION"
+          echo "Previous version: $PREVIOUS_VERSION"
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "version has changed!"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "version has NOT changed."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  create_release:
+    runs-on: ubuntu-latest
+    needs: check_version
+    if: needs.check_version.outputs.version_changed == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get current app version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update a draft release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: Release v${{ steps.get_version.outputs.version }}
+          draft: true # Important: create as a draft
+          prerelease: false
+          body: |
+            This is a draft release for version ${{ steps.get_version.outputs.version }}.
+            Assets will be uploaded in a subsequent workflow.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
