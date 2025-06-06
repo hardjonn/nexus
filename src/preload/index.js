@@ -46,6 +46,11 @@ const backupAPI = {
   abortCustomBackupUpload: () => electronAPI.ipcRenderer.invoke('backup/abort_backup_transfer', 'backup'),
 };
 
+const updateAPI = {
+  getCurrentVersion: () => electronAPI.ipcRenderer.invoke('update/get_current_version'),
+  checkForUpdates: () => electronAPI.ipcRenderer.invoke('update/check'),
+};
+
 electronAPI.ipcRenderer.on('progress', (event, data) => {
   console.log('progress', data);
   notifyProgressObservers(data);
@@ -61,6 +66,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('confAPI', confAPI);
     contextBridge.exposeInMainWorld('gamesAPI', gamesAPI);
     contextBridge.exposeInMainWorld('backupAPI', backupAPI);
+    contextBridge.exposeInMainWorld('updateAPI', updateAPI);
   } catch (error) {
     console.error(error);
   }
@@ -70,4 +76,5 @@ if (process.contextIsolated) {
   window.confAPI = confAPI;
   window.gamesAPI = gamesAPI;
   window.backupAPI = backupAPI;
+  window.updateAPI = updateAPI;
 }

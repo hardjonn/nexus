@@ -4,6 +4,7 @@ import Tabs from './components/Tabs.vue';
 import Tab from './components/Tab.vue';
 import GamesList from './components/GamesList.vue';
 import Backup from './components/Backup.vue';
+import About from './components/About.vue';
 </script>
 
 <template>
@@ -17,6 +18,7 @@ import Backup from './components/Backup.vue';
         </Suspense>
       </Tab>
       <Tab title="Backup" name="backup"><Backup /></Tab>
+      <Tab title="About" name="about"><About /></Tab>
     </Tabs>
   </div>
 </template>

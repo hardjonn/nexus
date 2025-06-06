@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
 import { backupPrefixes, backupCustomLocation, abortBackupTransfer, backupAllCustomLocations } from './backup';
+import { checkForUpdates, getCurrentVersion } from './update';
 import {
   getGames,
   uploadIcon,
@@ -209,4 +210,14 @@ ipcMain.handle('backup/all_custom_locations', async (event) => {
 ipcMain.handle('backup/abort_backup_transfer', async (event, abortId) => {
   console.log('backup/abort_backup_transfer', abortId);
   return await abortBackupTransfer(abortId);
+});
+
+ipcMain.handle('update/check', async () => {
+  console.log('update/check');
+  return await checkForUpdates();
+});
+
+ipcMain.handle('update/get_current_version', async () => {
+  console.log('update/get_current_version');
+  return await getCurrentVersion();
 });

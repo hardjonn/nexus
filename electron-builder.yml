@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: nexus
+appId: com.hardjonn.nexus
+productName: Nexus
 directories:
   buildResources: build
 files:
@@ -11,7 +11,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: nexus
+  executableName: Nexus
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -33,10 +33,12 @@ linux:
     - snap
     - deb
   maintainer: electronjs.org
-  category: Utility
+  category: Games
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  owner: hardjonn
+  provider: github
+  repo: nexus
+  url: https://github.com/hardjonn/nexus
