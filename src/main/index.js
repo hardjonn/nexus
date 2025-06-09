@@ -5,7 +5,7 @@ import icon from '../../resources/icon.png?asset';
 const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools-installer');
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
 import { backupPrefixes, backupCustomLocation, abortBackupTransfer, backupAllCustomLocations } from './backup';
-import { checkForUpdates, getCurrentVersion } from './update';
+import { checkForUpdates, getCurrentVersion, downloadUpdate, installUpdate } from './update';
 import {
   getGames,
   uploadIcon,
@@ -19,7 +19,12 @@ import {
   syncSteamState,
 } from './games';
 
+// TODO: these are the communication channels from the main process to the renderer process
+// make them easily accessible (global exposure?), so any part if the main process could use them
+// and send messages to the renderer process, and the renderer process just make subscription
+// to the channels and listens for any incoming messages to display/process them
 let progressCallback = null;
+let errorCallback = null;
 
 function createWindow() {
   // retrieve the window bounds from the config
@@ -79,6 +84,7 @@ function createWindow() {
   });
 
   progressCallback = (data) => mainWindow.webContents.send('progress', data);
+  errorCallback = (data) => mainWindow.webContents.send('error', data);
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -220,4 +226,14 @@ ipcMain.handle('update/check', async () => {
 ipcMain.handle('update/get_current_version', async () => {
   console.log('update/get_current_version');
   return await getCurrentVersion();
+});
+
+ipcMain.handle('update/download', async () => {
+  console.log('update/download');
+  return await downloadUpdate(progressCallback);
+});
+
+ipcMain.handle('update/install', async () => {
+  console.log('update/install');
+  return await installUpdate(errorCallback);
 });

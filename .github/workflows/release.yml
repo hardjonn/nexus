@@ -102,6 +102,6 @@ jobs:
           files: |
             app-build-${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}.zip
             dist/latest-linux.yml
-            dist/nexus-${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}.AppImage
+            dist/Nexus-${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

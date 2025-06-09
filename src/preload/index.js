@@ -13,6 +13,18 @@ function notifyProgressObservers(data) {
   progressObservers.forEach((observer) => observer(data));
 }
 
+// error observers list
+const errorObservers = [];
+
+function addObserverToError(errorObserver) {
+  console.log('error observers list', errorObservers);
+  errorObservers.push(errorObserver);
+}
+
+function notifyErrorObservers(data) {
+  errorObservers.forEach((observer) => observer(data));
+}
+
 // Custom APIs for renderer
 const api = {};
 
@@ -34,6 +46,8 @@ const gamesAPI = {
   downloadGameFromRemote: (steamAppId, gameItem, prefixAlias, libPath) =>
     electronAPI.ipcRenderer.invoke('games/item/download_from_remote', steamAppId, gameItem, prefixAlias, libPath),
   abortGameDownload: (steamAppId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', steamAppId),
+  // TODO: move the progress subscription to a separate channel, does not belong here
+  // backuper and updater are also using it
   subscribeToProgressUpdates: (progressObserver) => addObserverToProgress(progressObserver),
   syncSteamState: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/sync_steam_state', steamAppId, gameItem),
 };
@@ -49,11 +63,22 @@ const backupAPI = {
 const updateAPI = {
   getCurrentVersion: () => electronAPI.ipcRenderer.invoke('update/get_current_version'),
   checkForUpdates: () => electronAPI.ipcRenderer.invoke('update/check'),
+  downloadUpdate: () => electronAPI.ipcRenderer.invoke('update/download'),
+  installUpdate: () => electronAPI.ipcRenderer.invoke('update/install'),
+};
+
+const errorAPI = {
+  subscribeToErrorUpdates: (errorObserver) => addObserverToError(errorObserver),
 };
 
 electronAPI.ipcRenderer.on('progress', (event, data) => {
   console.log('progress', data);
   notifyProgressObservers(data);
+});
+
+electronAPI.ipcRenderer.on('error', (event, data) => {
+  console.log('error', data);
+  notifyErrorObservers(data);
 });
 
 // Use `contextBridge` APIs to expose Electron APIs to
@@ -67,6 +92,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('gamesAPI', gamesAPI);
     contextBridge.exposeInMainWorld('backupAPI', backupAPI);
     contextBridge.exposeInMainWorld('updateAPI', updateAPI);
+    contextBridge.exposeInMainWorld('errorAPI', errorAPI);
   } catch (error) {
     console.error(error);
   }
@@ -77,4 +103,5 @@ if (process.contextIsolated) {
   window.gamesAPI = gamesAPI;
   window.backupAPI = backupAPI;
   window.updateAPI = updateAPI;
+  window.errorAPI = errorAPI;
 }

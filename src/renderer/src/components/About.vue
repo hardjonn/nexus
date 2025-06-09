@@ -1,18 +1,20 @@
 <script setup>
 import { reactive, computed, watch } from 'vue';
-import { store } from './../store.js';
+import { error } from '../error.js';
 import { progress } from '../progress.js';
-import { getCurrentVersion, checkForUpdates } from '../update.js';
+import { getCurrentVersion, checkForUpdates, downloadUpdate, installUpdate } from '../update.js';
 
 const processingActions = {
   gettingCurrentVersion: 'Getting current version...',
   checkingForUpdates: 'Checking for updates...',
   downloadingUpdate: 'Downloading update...',
+  installingUpdate: 'Installing update...',
 };
 
 const data = reactive({
   currentVersion: null,
   updateCheckResult: null,
+  downloadedFiles: null,
 
   processingAction: null,
 
@@ -40,17 +42,18 @@ function activateProcessingAction(action) {
 }
 
 watch(
-  () => progress.backup,
+  () => progress.downloadUpdate,
   () => {
-    data.progress = progress.backup;
+    data.progress = progress.downloadUpdate;
+  }
+);
 
-    if (!data.progressContent) {
-      data.progressContent = '';
-    }
-
-    if (progress.backup) {
-      data.progressContent += progress.backup.rawOutput;
-    }
+watch(
+  () => error.installUpdate,
+  () => {
+    console.log('error.installUpdate:', error.installUpdate);
+    data.errorMessage = error.installUpdate;
+    data.errors = [error.installUpdate.error];
   }
 );
 
@@ -66,6 +69,9 @@ async function onActionGetCurrentVersion() {
     }
 
     data.currentVersion = response.version;
+
+    // check for updated after we got the current version
+    onActionCheckForUpdates();
   } catch (error) {
     console.error('Error getting current version:', error);
     data.errorMessage = 'An error occurred while getting the current version: ' + error.message;
@@ -95,6 +101,85 @@ async function onActionCheckForUpdates() {
   }
 }
 
+async function onActionDownloadUpdate() {
+  activateProcessingAction(processingActions.downloadingUpdate);
+
+  try {
+    const response = await downloadUpdate();
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message;
+      return;
+    }
+
+    data.downloadedFiles = response.downloadedFiles;
+    data.successMessage = 'Downloaded update';
+  } catch (error) {
+    console.error('Error downloading update:', error);
+    data.errorMessage = 'An error occurred while downloading the update: ' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
+async function onActionInstallUpdate() {
+  activateProcessingAction(processingActions.installingUpdate);
+
+  try {
+    const response = await installUpdate();
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message;
+      return;
+    }
+
+    data.successMessage = null;
+  } catch (error) {
+    console.error('Error installing update:', error);
+    data.errorMessage = 'An error occurred while installing the update: ' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
+const isUpdateAvailable = computed(() => {
+  return data.updateCheckResult && data.updateCheckResult.isUpdateAvailable;
+});
+
+const isReadyToInstall = computed(() => {
+  return data.downloadedFiles && data.downloadedFiles.length > 0;
+});
+
+function downloadSpeed(bytesPerSecond) {
+  if (!bytesPerSecond) {
+    return null;
+  }
+
+  // convert bytes per second to Mb/s or Kb/s
+  if (bytesPerSecond >= 1024 * 1024) {
+    return (bytesPerSecond / (1024 * 1024)).toFixed(2) + ' Mb/s';
+  }
+
+  return (bytesPerSecond / 1024).toFixed(2) + ' Kb/s';
+}
+
+function formattedSize(size, base) {
+  let baseLiteralIndex = 0;
+  const sizeLiterals = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+  if (base === 'KB') {
+    baseLiteralIndex = 1;
+  }
+
+  if (size < 1024) return `${size} ${sizeLiterals[baseLiteralIndex]}`;
+
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} ${sizeLiterals[baseLiteralIndex + 1]}`;
+
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} ${sizeLiterals[baseLiteralIndex + 2]}`;
+
+  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} ${sizeLiterals[baseLiteralIndex + 3]}`;
+}
+
 onActionGetCurrentVersion();
 </script>
 
@@ -108,54 +193,98 @@ onActionGetCurrentVersion();
 
     <div class="flex flex-col items-start justify-start w-full mb-8">
       <div class="flex items-center justify-between w-full mb-4">
-        <h3 class="block mb-2 flex-grow text-2xl font-medium dark:text-white mb-8">App Updates</h3>
+        <h3 class="block mb-2 flex-grow text-2xl font-medium dark:text-white">App Updates</h3>
 
-        <div class="text-sm font-medium dark:text-gray-400">Current Version: {{ data.currentVersion }}</div>
+        <div class="text-lg font-medium dark:text-gray-400">Current Version: {{ data.currentVersion }}</div>
       </div>
 
+      <div v-if="!isUpdateAvailable" class="text-lg font-medium dark:text-gray-400 mb-8">Update is not available.</div>
+      <div v-if="isUpdateAvailable" class="text-lg font-medium dark:text-gray-400 mb-8">Update is available.</div>
+
+      <div v-if="isUpdateAvailable" class="grid gap-6 mb-6 grid-cols-[20fr_40fr_40fr] dark:text-white w-full">
+        <div class="col-start-2 col-end-2">Current Release</div>
+        <div class="col-start-3">New Release</div>
+
+        <div class="font-bold">Version:</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.version" />
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.version" />
+
+        <div class="font-bold">Release Date:</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.releaseDate" />
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.releaseDate" />
+
+        <div class="font-bold">Release Name:</div>
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.releaseName" />
+        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.releaseName" />
+
+        <div class="font-bold">SHA512:</div>
+        <textarea class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.sha512" />
+        <textarea class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.sha512" />
+
+        <div class="font-bold">Release Notes:</div>
+        <p class="p-2.5 dark:bg-gray-700 dark:text-white" v-html="data.updateCheckResult.versionInfo.releaseNotes" />
+        <p class="p-2.5 dark:bg-gray-700 dark:text-white" v-html="data.updateCheckResult.updateInfo.releaseNotes" />
+
+        <div v-if="data.progress && isProcessingAction(processingActions.downloadingUpdate)" class="col-span-3">
+          <div class="mt-2 mb-2 text-base font-medium text-center text-green-700 dark:text-green-500">
+            {{ formattedSize(data.progress.transferred, 'B') }} of {{ formattedSize(data.progress.total, 'B') }} | {{ downloadSpeed(data.progress.bytesPerSecond) }}
+          </div>
+          <div class="w-full h-4 mb-4 bg-gray-200 rounded-full dark:bg-gray-700">
+            <div class="h-4 dark:bg-green-500 text-xs font-medium text-center p-0.5 leading-none rounded-full" :style="{ width: data.progress.percent }">
+              {{ data.progress.percent.toFixed(2) }}%
+            </div>
+          </div>
+        </div>
+
+        <div v-if="data.downloadedFiles" class="font-bold">Downloaded Files</div>
+        <div v-if="data.downloadedFiles" class="col-span-2">
+          <ul class="space-y-1 text-gray-500 list-inside dark:text-gray-400">
+            <li v-for="file of data.downloadedFiles" :key="file" class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mr-4">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m9 13.5 3 3m0 0 3-3m-3 3v-6m1.06-4.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"
+                />
+              </svg>
+
+              {{ file }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end w-full">
       <button
+        v-if="!isUpdateAvailable"
         type="button"
         class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+        :disabled="data.processingAction"
         @click="onActionCheckForUpdates"
       >
-        Check for Updates
+        {{ isProcessingAction(processingActions.checkingForUpdates) ? 'Checking for updates...' : 'Check for Updates' }}
       </button>
 
-      <div v-if="data.updateCheckResult && !data.updateCheckResult.isUpdateAvailable" class="text-sm font-medium dark:text-gray-400">Update is not available.</div>
+      <button
+        v-if="isUpdateAvailable && !isReadyToInstall"
+        type="button"
+        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+        :disabled="data.processingAction"
+        @click="onActionDownloadUpdate"
+      >
+        {{ isProcessingAction(processingActions.downloadingUpdate) ? 'Downloading update...' : 'Download Update' }}
+      </button>
 
-      <div v-if="data.updateCheckResult && data.updateCheckResult.isUpdateAvailable">
-        <div class="text-sm font-medium dark:text-gray-400">Update is available.</div>
-
-        <div class="text-sm font-medium dark:text-gray-400">Current Version: {{ data.updateCheckResult.versionInfo.version }}</div>
-        <div class="text-sm font-medium dark:text-gray-400">Latest Version: {{ data.updateCheckResult.updateInfo.version }}</div>
-
-        <div class="text-sm font-medium dark:text-gray-400">Current Release Date: {{ data.updateCheckResult.versionInfo.releaseDate }}</div>
-        <div class="text-sm font-medium dark:text-gray-400">Latest Release Date: {{ data.updateCheckResult.updateInfo.releaseDate }}</div>
-
-        <div class="text-sm font-medium dark:text-gray-400">Current Release Notes: {{ data.updateCheckResult.versionInfo.releaseNotes }}</div>
-        <div class="text-sm font-medium dark:text-gray-400">Latest Release Notes: {{ data.updateCheckResult.updateInfo.releaseNotes }}</div>
-
-        <div class="text-sm font-medium dark:text-gray-400">Current Release Date: {{ data.updateCheckResult.versionInfo.releaseDate }}</div>
-        <div class="text-sm font-medium dark:text-gray-400">Latest Release Date: {{ data.updateCheckResult.updateInfo.releaseDate }}</div>
-
-        <div class="text-sm font-medium dark:text-gray-400">Current Release SHA512: {{ data.updateCheckResult.versionInfo.sha512 }}</div>
-        <div class="text-sm font-medium dark:text-gray-400">Latest Release SHA512: {{ data.updateCheckResult.updateInfo.sha512 }}</div>
-      </div>
-    </div>
-  </div>
-
-  <div v-if="data.progress && (isProcessingAction(processingActions.uploadingPrefixesBackup) || isProcessingAction(processingActions.uploadingCustomBackup))">
-    <div class="mt-2 mb-2 text-base font-medium text-center text-green-700 dark:text-green-500">{{ data.progress.transferred }} | {{ data.progress.speed }}</div>
-    <div class="w-full h-4 mb-4 bg-gray-200 rounded-full dark:bg-gray-700">
-      <div class="h-4 dark:bg-green-500 text-xs font-medium text-center p-0.5 leading-none rounded-full" :style="{ width: data.progress.percentage }">
-        {{ data.progress.percentage }}
-      </div>
-    </div>
-  </div>
-
-  <div v-if="data.progressContent" class="dark:bg-gray-700 dark:text-gray-400">
-    <div class="p-4 w-full h-full max-h-[480px] overflow-auto">
-      <pre v-html="data.progressContent"></pre>
+      <button
+        v-if="isUpdateAvailable && isReadyToInstall"
+        type="button"
+        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+        :disabled="data.processingAction"
+        @click="onActionInstallUpdate"
+      >
+        Quit and Install
+      </button>
     </div>
   </div>
 
