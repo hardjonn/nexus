@@ -1,6 +1,6 @@
 {
   "name": "Nexus",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Nexus - Steam Games Manager",
   "main": "./out/main/index.js",
   "author": "hardjonn",
@@ -58,7 +58,7 @@
   },
   "build": {
     "appId": "com.hardjonn.nexus",
-    "productName": "Nexus: Steam Games Manager",
+    "productName": "Nexus",
     "directories": {
       "output": "dist"
     },
