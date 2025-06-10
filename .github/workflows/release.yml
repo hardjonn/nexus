@@ -84,9 +84,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Archive production build
+      - name: List files in the dist directory
         if: steps.compare_version.outputs.VERSION_CHANGED == 'true'
-        run: zip -r app-build-${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}.zip dist/
+        run: ls -la dist
 
       - name: Upload Release Asset
         if: steps.compare_version.outputs.VERSION_CHANGED == 'true'
@@ -100,7 +100,6 @@ jobs:
           body: |
             New version ${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }} has been released.
           files: |
-            app-build-${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}.zip
             dist/latest-linux.yml
             dist/Nexus-${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}.AppImage
         env:
