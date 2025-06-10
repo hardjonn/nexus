@@ -23,7 +23,9 @@ autoUpdater.on('error', (info) => {
     error: info,
   };
 
-  errorCallbackInternal(error);
+  if (errorCallbackInternal) {
+    errorCallbackInternal(error);
+  }
 });
 
 async function getCurrentVersion() {
