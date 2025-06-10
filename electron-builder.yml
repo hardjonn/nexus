@@ -32,7 +32,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: https://github.com/hardjonn
+  maintainer: hardjonn
   category: Game
 appImage:
   artifactName: ${name}-${version}.${ext}
