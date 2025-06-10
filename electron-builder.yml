@@ -1,4 +1,4 @@
-appId: com.hardjonn.nexus
+appId: com.nexus.nexus
 productName: Nexus
 directories:
   buildResources: build
@@ -32,8 +32,8 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
-  category: Games
+  maintainer: https://github.com/hardjonn
+  category: Game
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false

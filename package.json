@@ -57,15 +57,15 @@
     "vue-eslint-parser": "^10.1.3"
   },
   "build": {
-    "appId": "com.hardjonn.nexus",
+    "appId": "com.nexus.nexus",
     "productName": "Nexus",
     "directories": {
       "output": "dist"
     },
     "linux": {
       "target": "appimage",
-      "icon": "build/icon.png",
-      "category": "Games",
+      "icon": "assets/icons/icon.png",
+      "category": "Game",
       "publish": [
         "github"
       ]
