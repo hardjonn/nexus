@@ -91,7 +91,7 @@ jobs:
       - name: Upload Release Asset
         if: steps.compare_version.outputs.VERSION_CHANGED == 'true'
         id: upload-release-asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }} # The tag associated with the draft release
           name: Release v${{ steps.get_current_version.outputs.CURRENT_APP_VERSION }}
