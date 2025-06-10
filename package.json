@@ -1,6 +1,6 @@
 {
   "name": "Nexus",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Nexus - Steam Games Manager",
   "main": "./out/main/index.js",
   "author": "hardjonn",
