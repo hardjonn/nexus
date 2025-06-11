@@ -67,6 +67,10 @@ const updateAPI = {
   installUpdate: () => electronAPI.ipcRenderer.invoke('update/install'),
 };
 
+const integrationAPI = {
+  addDesktopEntry: () => electronAPI.ipcRenderer.invoke('integration/add_desktop_entry'),
+};
+
 const errorAPI = {
   subscribeToErrorUpdates: (errorObserver) => addObserverToError(errorObserver),
 };
@@ -92,6 +96,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('gamesAPI', gamesAPI);
     contextBridge.exposeInMainWorld('backupAPI', backupAPI);
     contextBridge.exposeInMainWorld('updateAPI', updateAPI);
+    contextBridge.exposeInMainWorld('integrationAPI', integrationAPI);
     contextBridge.exposeInMainWorld('errorAPI', errorAPI);
   } catch (error) {
     console.error(error);
@@ -103,5 +108,6 @@ if (process.contextIsolated) {
   window.gamesAPI = gamesAPI;
   window.backupAPI = backupAPI;
   window.updateAPI = updateAPI;
+  window.integrationAPI = integrationAPI;
   window.errorAPI = errorAPI;
 }

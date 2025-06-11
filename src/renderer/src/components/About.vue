@@ -3,12 +3,14 @@ import { reactive, computed, watch } from 'vue';
 import { error } from '../error.js';
 import { progress } from '../progress.js';
 import { getCurrentVersion, checkForUpdates, downloadUpdate, installUpdate } from '../update.js';
+import { addDesktopEntry } from '../integration.js';
 
 const processingActions = {
   gettingCurrentVersion: 'Getting current version...',
   checkingForUpdates: 'Checking for updates...',
   downloadingUpdate: 'Downloading update...',
   installingUpdate: 'Installing update...',
+  integrating: 'Integrating...',
 };
 
 const data = reactive({
@@ -25,6 +27,8 @@ const data = reactive({
 
   progressContent: null,
   progress: null,
+
+  desktopEntryContent: null,
 });
 
 function isProcessingAction(action) {
@@ -39,6 +43,7 @@ function activateProcessingAction(action) {
   data.errors = null;
   data.progress = null;
   data.progressContent = null;
+  data.desktopEntryContent = null;
 }
 
 watch(
@@ -137,6 +142,27 @@ async function onActionInstallUpdate() {
   } catch (error) {
     console.error('Error installing update:', error);
     data.errorMessage = 'An error occurred while installing the update: ' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
+async function onActionAddDesktopEntry() {
+  activateProcessingAction(processingActions.integrating);
+
+  try {
+    const response = await addDesktopEntry();
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message;
+      return;
+    }
+
+    data.successMessage = 'Desktop entry added/updated';
+    data.desktopEntryContent = response.desktopEntryContent;
+  } catch (error) {
+    console.error('Error integrating:', error);
+    data.errorMessage = 'An error occurred while integrating: ' + error.message;
   } finally {
     data.processingAction = null;
   }
@@ -285,6 +311,27 @@ onActionGetCurrentVersion();
       >
         Quit and Install
       </button>
+    </div>
+
+    <div class="flex flex-col items-start justify-start w-full mb-8">
+      <div class="flex items-center justify-between w-full mt-8">
+        <h3 class="block mb-2 flex-grow text-2xl font-medium dark:text-white">Integration</h3>
+      </div>
+
+      <div v-if="data.desktopEntryContent" class="flex items-center justify-start w-full mt-8">
+        <textarea class="p-2.5 dark:bg-gray-700 dark:text-white w-full h-70" readonly :value="data.desktopEntryContent" />
+      </div>
+
+      <div class="flex items-center justify-start w-full mt-8">
+        <button
+          type="button"
+          class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+          :disabled="data.processingAction"
+          @click="onActionAddDesktopEntry"
+        >
+          Add/Update Desktop Entry
+        </button>
+      </div>
     </div>
   </div>
 

@@ -6,6 +6,7 @@ const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
 import { backupPrefixes, backupCustomLocation, abortBackupTransfer, backupAllCustomLocations } from './backup';
 import { checkForUpdates, getCurrentVersion, downloadUpdate, installUpdate } from './update';
+import { addDesktopEntry } from './integration';
 import {
   getGames,
   uploadIcon,
@@ -236,4 +237,9 @@ ipcMain.handle('update/download', async () => {
 ipcMain.handle('update/install', async () => {
   console.log('update/install');
   return await installUpdate(errorCallback);
+});
+
+ipcMain.handle('integration/add_desktop_entry', async () => {
+  console.log('integration/add_desktop_entry');
+  return await addDesktopEntry();
 });

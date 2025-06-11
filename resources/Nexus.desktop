@@ -1,0 +1,10 @@
+#!/usr/bin/env xdg-open
+
+[Desktop Entry]
+Name=Nexus
+Comment=Nexus
+Exec=%EXEC%
+Icon=%ICON%
+Type=Application
+Categories=Game;
+Terminal=false
