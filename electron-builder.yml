@@ -1,15 +1,19 @@
 appId: com.nexus.nexus
 productName: Nexus
 directories:
-  buildResources: build
+  output: ./dist
+publish: { provider: github, owner: hardjonn, repo: nexus, releaseType: draft, vPrefixedTagName: true }
 files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-asarUnpack:
-  - resources/**
+asar: true
+# extraFiles:
+#   - resources
+# asarUnpack:
+#   - resources
 win:
   executableName: Nexus
 nsis:
@@ -25,20 +29,16 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
 linux:
   target:
     - AppImage
-    - snap
-    - deb
+    # - snap
+    # - deb
+  icon: assets/icons/icon.png
   maintainer: hardjonn
   category: Game
 appImage:
   artifactName: ${name}-${version}.${ext}
+dmg:
+  artifactName: ${name}-${version}.${ext}
 npmRebuild: false
-publish:
-  owner: hardjonn
-  provider: github
-  repo: nexus
-  url: https://github.com/hardjonn/nexus
