@@ -227,31 +227,23 @@ onActionGetCurrentVersion();
       <div v-if="!isUpdateAvailable" class="text-lg font-medium dark:text-gray-400 mb-8">Update is not available.</div>
       <div v-if="isUpdateAvailable" class="text-lg font-medium dark:text-gray-400 mb-8">Update is available.</div>
 
-      <div v-if="isUpdateAvailable" class="grid gap-6 mb-6 grid-cols-[20fr_40fr_40fr] dark:text-white w-full">
-        <div class="col-start-2 col-end-2">Current Release</div>
-        <div class="col-start-3">New Release</div>
-
-        <div class="font-bold">Version:</div>
-        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.version" />
+      <div v-if="isUpdateAvailable" class="grid gap-6 mb-6 grid-cols-[20fr_80fr] dark:text-white w-full">
+        <div class="font-bold flex items-center">Version:</div>
         <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.version" />
 
-        <div class="font-bold">Release Date:</div>
-        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.releaseDate" />
+        <div class="font-bold flex items-center">Release Date:</div>
         <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.releaseDate" />
 
-        <div class="font-bold">Release Name:</div>
-        <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.releaseName" />
+        <div class="font-bold flex items-center">Release Name:</div>
         <input class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.releaseName" />
 
-        <div class="font-bold">SHA512:</div>
-        <textarea class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.versionInfo.sha512" />
+        <div class="font-bold flex items-center">SHA512:</div>
         <textarea class="p-2.5 dark:bg-gray-700 dark:text-white" readonly :value="data.updateCheckResult.updateInfo.sha512" />
 
-        <div class="font-bold">Release Notes:</div>
-        <p class="p-2.5 dark:bg-gray-700 dark:text-white" v-html="data.updateCheckResult.versionInfo.releaseNotes" />
+        <div class="font-bold flex items-center">Release Notes:</div>
         <p class="p-2.5 dark:bg-gray-700 dark:text-white" v-html="data.updateCheckResult.updateInfo.releaseNotes" />
 
-        <div v-if="data.progress && isProcessingAction(processingActions.downloadingUpdate)" class="col-span-3">
+        <div v-if="data.progress && isProcessingAction(processingActions.downloadingUpdate)" class="col-span-2">
           <div class="mt-2 mb-2 text-base font-medium text-center text-green-700 dark:text-green-500">
             {{ formattedSize(data.progress.transferred, 'B') }} of {{ formattedSize(data.progress.total, 'B') }} | {{ downloadSpeed(data.progress.bytesPerSecond) }}
           </div>
@@ -262,9 +254,9 @@ onActionGetCurrentVersion();
           </div>
         </div>
 
-        <div v-if="data.downloadedFiles" class="font-bold">Downloaded Files</div>
-        <div v-if="data.downloadedFiles" class="col-span-2">
-          <ul class="space-y-1 text-gray-500 list-inside dark:text-gray-400">
+        <div v-if="data.downloadedFiles" class="font-bold flex items-center">Downloaded Files:</div>
+        <div v-if="data.downloadedFiles">
+          <ul class="list-inside dark:bg-gray-700 dark:text-white p-2.5">
             <li v-for="file of data.downloadedFiles" :key="file" class="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mr-4">
                 <path

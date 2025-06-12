@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "start": "electron-vite preview",
-    "dev": "electron-vite dev",
+    "dev": "APP_ENV=dev electron-vite dev",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

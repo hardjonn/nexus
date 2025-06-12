@@ -2,9 +2,11 @@ import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
 // workaround for dev mode: https://www.electron.build/auto-update
-// import path from 'path';
-// process.env.APPIMAGE = path.join(__dirname, 'dist', `Nexus-${app.getVersion()}.AppImage`);
-// autoUpdater.forceDevUpdateConfig = true;
+if (process.env.APP_ENV === 'dev') {
+  const path = require('path');
+  process.env.APPIMAGE = path.join(__dirname, 'dist', `Nexus-${app.getVersion()}.AppImage`);
+  autoUpdater.forceDevUpdateConfig = true;
+}
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;

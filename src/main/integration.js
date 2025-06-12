@@ -33,7 +33,7 @@ async function addDesktopEntry() {
       throw new Error('APPIMAGE environment variable is not set');
     }
 
-    const appMountDir = process.env.APPDIR;
+    const appMountDir = process.env.APP_ENV === 'dev' ? path.resolve(__dirname, '../../') : process.env.APPDIR;
     console.log('integration::addDesktopEntry: appMountDir', appMountDir);
 
     // when AppImage is created it puts the .DirIcon link in the AppDir root folder
@@ -47,7 +47,8 @@ async function addDesktopEntry() {
     const homeLocalDir = path.join(homeDir, '.local');
     console.log('integration::addDesktopEntry: homeLocalDir', homeLocalDir);
 
-    const fullIconPath = dirIconLinkTarget.replace('usr/', homeLocalDir + '/');
+    const dirIconLinkTargetPath = dirIconLinkTarget.replace('usr/', '');
+    const fullIconPath = path.join(homeLocalDir, dirIconLinkTargetPath);
     console.log('integration::addDesktopEntry: fullIconPath', fullIconPath);
 
     // copy icon in the ~/.local/share/icons folder
