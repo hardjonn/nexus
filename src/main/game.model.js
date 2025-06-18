@@ -1,59 +1,67 @@
-const { DataTypes } = require('sequelize');
+import Ajv from 'ajv/dist/jtd';
+const ajv = new Ajv();
 
-function initGameModel(sequelize) {
-  console.log('game.model::initGameModel');
-  return sequelize.define('games', {
+const schema = {
+  properties: {
     steam_app_id: {
-      type: DataTypes.STRING,
-      primaryKey: true,
+      type: 'string',
     },
     steam_title: {
-      type: DataTypes.STRING,
+      type: 'string',
     },
     steam_exe_target: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     steam_start_dir: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     steam_launch_args: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     icon: {
-      type: DataTypes.BLOB,
+      type: 'string',
+      nullable: true,
     },
     game_location: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     prefix_location: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     launcher: {
-      type: DataTypes.ENUM('NOOP', 'PORT_PROTON', 'PS2', 'PS3', 'SWITCH_CITRON', 'SWITCH_RYUJINX'), // Define the ENUM type and its values
-      defaultValue: 'NOOP', // Set the default value
-      allowNull: false,
+      enum: ['NOOP', 'PORT_PROTON', 'PS2', 'PS3', 'SWITCH_CITRON', 'SWITCH_RYUJINX'],
     },
     launcher_target: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     game_hash_md5: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     game_size_in_bytes: {
-      type: DataTypes.INTEGER,
+      type: 'int32',
     },
     prefix_hash_md5: {
-      type: DataTypes.STRING,
+      type: 'string',
+      nullable: true,
     },
     prefix_size_in_bytes: {
-      type: DataTypes.INTEGER,
+      type: 'int32',
     },
     status: {
-      type: DataTypes.ENUM('DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED'), // Define the ENUM type and its values
-      defaultValue: 'DRAFT', // Set the default value
-      allowNull: false,
+      enum: ['DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED'],
     },
-  });
-}
+  },
+};
 
-export { initGameModel };
+const dbModelValidator = ajv.compile(schema);
+const dbModelSerializer = ajv.compileSerializer(schema);
+const dbModelParser = ajv.compileParser(schema);
+
+export { dbModelValidator, dbModelSerializer, dbModelParser };

@@ -24,19 +24,6 @@ function loadIconFromPath(iconPath) {
   }
 }
 
-function makeIconFromDbIcon(dbIcon) {
-  try {
-    if (!dbIcon) {
-      return null;
-    }
-
-    return Buffer.from(dbIcon).toString('base64');
-  } catch (error) {
-    console.error('game.icon::makeIconFromDbIcon: Error making icon from db icon:', error);
-    return null;
-  }
-}
-
 async function makeIconFromPath(iconPath) {
   try {
     if (!iconPath) {
@@ -45,7 +32,7 @@ async function makeIconFromPath(iconPath) {
 
     const image = await Jimp.read(iconPath);
     // we need to convert image to a 192x192 JPG
-    const resizedImage = await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 });
+    const resizedImage = (await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 })).toString('base64');
     console.log('game.icon::makeIconFromPath: Resized image buffer:', resizedImage.length);
 
     return resizedImage;
@@ -66,7 +53,7 @@ async function makeIconFromLoadedSteamIcon(icon) {
     const image = await Jimp.fromBuffer(iconBuffer);
 
     // we need to convert image to a 192x192 JPG
-    const resizedImage = await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 });
+    const resizedImage = (await image.resize({ w: 192 }).getBuffer('image/jpeg', { quality: 60 })).toString('base64');
     return resizedImage;
   } catch (error) {
     console.error('game.icon::makeIconFromLoadedSteamIcon: Error making icon from loaded steam icon:', error);
@@ -74,4 +61,4 @@ async function makeIconFromLoadedSteamIcon(icon) {
   }
 }
 
-export { loadIconFromPath, makeIconFromDbIcon, makeIconFromPath, makeIconFromLoadedSteamIcon };
+export { loadIconFromPath, makeIconFromPath, makeIconFromLoadedSteamIcon };

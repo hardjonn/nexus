@@ -1,12 +1,12 @@
 import { db } from './db';
 import { makeGameItemFromDbItem } from './game.item';
 
-const Game = db.games;
+const Game = db;
 
-async function db_getAllGamesMap() {
+async function db_getAllGamesMap(progressCallback) {
   try {
     console.log('game.queries::db_getAllGamesMap');
-    const games = await Game.findAll();
+    const games = await Game.findAll(progressCallback);
     // convert games to a map
     const gamesMap = {};
     for (const game of games) {
@@ -24,42 +24,35 @@ async function db_getAllGamesMap() {
 async function db_uploadIcon(steamAppId, resizedImage) {
   try {
     console.log('game.queries::db_uploadIcon', steamAppId);
-    const game = await Game.findOne({
+    const update = {
+      icon: resizedImage,
+    };
+
+    const conditions = {
       where: {
         steam_app_id: steamAppId,
       },
-    });
+    };
+
+    const game = await Game.update(update, conditions);
 
     if (!game) {
       throw new Error(`Game with steamAppId ${steamAppId} not found`);
     }
 
-    await game.update({
-      icon: resizedImage,
-    });
     console.log(`game.queries::db_uploadIcon: Icon for game ${steamAppId} updated successfully`);
+    return true;
   } catch (error) {
     console.error('game.queries::db_uploadIcon: Error uploading icon:', error);
     return false;
   }
-
-  return true;
 }
 
 async function db_updateGameItem(steamAppId, gameItem) {
   try {
     console.log('game.queries::db_updateGameItem', steamAppId);
-    const game = await Game.findOne({
-      where: {
-        steam_app_id: steamAppId,
-      },
-    });
 
-    if (!game) {
-      throw new Error(`Game with steamAppId ${steamAppId} not found`);
-    }
-
-    await game.update({
+    const update = {
       steam_title: gameItem.steamTitle,
       steam_exe_target: gameItem.steamExeTarget,
       steam_start_dir: gameItem.steamStartDir,
@@ -73,7 +66,15 @@ async function db_updateGameItem(steamAppId, gameItem) {
       game_size_in_bytes: gameItem.gameSizeInBytes,
       prefix_hash_md5: gameItem.prefixHash,
       prefix_size_in_bytes: gameItem.prefixSizeInBytes,
-    });
+    };
+
+    const conditions = {
+      where: {
+        steam_app_id: steamAppId,
+      },
+    };
+
+    const game = await Game.update(update, conditions);
     console.log(`game.queries::db_updateGameItem: Game item ${steamAppId} updated successfully`);
 
     return makeGameItemFromDbItem(game);
@@ -105,7 +106,12 @@ async function db_createGameItemFromSteamData(steamAppId, gameItem) {
 
     console.log(`Game item ${steamAppId} created successfully`);
 
-    return makeGameItemFromDbItem(game);
+    console.log('game.queries::db_createGameItemFromSteamData: Game item:', game);
+
+    const madeGameItem = makeGameItemFromDbItem(game);
+    console.log('game.queries::db_createGameItemFromSteamData: Made game item:', madeGameItem);
+
+    return madeGameItem;
   } catch (error) {
     console.error('Error creating game item:', error);
     return null;
@@ -114,16 +120,18 @@ async function db_createGameItemFromSteamData(steamAppId, gameItem) {
 
 async function db_updateGameState(steamAppId, state) {
   try {
-    await Game.update(
-      {
-        status: state,
+    const update = {
+      status: state,
+    };
+
+    const conditions = {
+      where: {
+        steam_app_id: steamAppId,
       },
-      {
-        where: {
-          steam_app_id: steamAppId,
-        },
-      }
-    );
+    };
+
+    await Game.update(update, conditions);
+
     console.log(`Game state ${steamAppId} updated successfully`);
     return true;
   } catch (error) {

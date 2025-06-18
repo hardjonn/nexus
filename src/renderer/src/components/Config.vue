@@ -53,67 +53,6 @@ const saveOptions = () => {
 <template>
   <form @submit.prevent="saveOptions">
     <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
-      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Database Settings</span>
-    </h2>
-    <div class="grid gap-6 mb-6 md:grid-cols-2">
-      <div>
-        <label for="db_host" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">DB Host</label>
-        <input
-          id="db_host"
-          v-model="store.db.host"
-          type="text"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="nexus.db.host"
-          required
-        />
-      </div>
-      <div>
-        <label for="db_port" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">DB Port</label>
-        <input
-          id="db_port"
-          v-model="store.db.port"
-          type="text"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="3306"
-          required
-        />
-      </div>
-      <div>
-        <label for="db_user" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">DB User</label>
-        <input
-          id="db_user"
-          v-model="store.db.user"
-          type="text"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="user"
-          required
-        />
-      </div>
-      <div>
-        <label for="db_base" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">DB Base</label>
-        <input
-          id="db_base"
-          v-model="store.db.base"
-          type="text"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="database"
-          required
-        />
-      </div>
-      <div>
-        <label for="db_pass" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">DB Pass</label>
-        <input
-          id="db_pass"
-          v-model="store.db.pass"
-          type="text"
-          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder=""
-          required
-        />
-      </div>
-    </div>
-
-    <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
       <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Steam Settings</span>
     </h2>
     <div class="grid gap-6 mb-6 md:grid-cols-2">
@@ -232,6 +171,17 @@ const saveOptions = () => {
         />
       </div>
       <div>
+        <label for="remote_db_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote DB Path</label>
+        <input
+          id="remote_db_path"
+          v-model="store.remote_lib.db_path"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Nexus/DB"
+          required
+        />
+      </div>
+      <div>
         <label for="remote_default_prefixes" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Remote Default Prefixes</label>
         <input
           id="remote_default_prefixes"
@@ -267,6 +217,17 @@ const saveOptions = () => {
           type="text"
           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Port Proton Path"
+          required
+        />
+      </div>
+      <div>
+        <label for="local_db_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Local DB Path</label>
+        <input
+          id="local_db_path"
+          v-model="store.local_lib.db_path"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Local DB Path"
           required
         />
       </div>

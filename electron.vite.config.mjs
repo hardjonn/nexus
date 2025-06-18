@@ -7,16 +7,13 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      sourcemap: true,
+      sourcemap: 'inline',
       rollupOptions: {
         // external: ['electron-store'],
-        output: {
-          sourcemap: true,
-        },
       },
-      //   output: {
-      //     format: 'es',
-      //   },
+      // output: {
+      //   format: 'es',
+      // },
     },
   },
   preload: {

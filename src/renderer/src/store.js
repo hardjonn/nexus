@@ -1,15 +1,6 @@
 import { reactive } from 'vue';
 
 const store = reactive({
-  // db config
-  db: {
-    host: '',
-    port: 9306,
-    user: '',
-    pass: '',
-    base: '',
-  },
-
   // steam config
   steam: {
     user_id: '',
@@ -23,6 +14,8 @@ const store = reactive({
     host: '',
     games_path: 'Nexus/Games',
     prefixes_path: 'Nexus/Prefixes',
+    db_path: 'Nexus/DB',
+    default_prefixes: 'default',
   },
 
   // port proton config
@@ -39,6 +32,7 @@ const store = reactive({
   local_lib: {
     games_path: [{ label: 'SSD', path: 'Games' }],
     prefixes_path: '',
+    db_path: '/home/deck/Nexus/DB',
   },
 
   // backup config
@@ -62,7 +56,6 @@ const store = reactive({
 
 window.confAPI.getConfig().then((config) => {
   console.log('Received Config from the main process:', config);
-  store.db = config.db;
   store.steam = config.steam;
   store.remote_lib = config.remote_lib;
   store.port_proton = config.port_proton;

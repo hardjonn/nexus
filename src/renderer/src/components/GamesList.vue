@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, reactive, watch } from 'vue';
 import { getGames } from '../games.js';
 import { progress } from '../progress.js';
 import GameItem from './GameItem.vue';
@@ -10,6 +10,16 @@ const gamesMap = ref({});
 const search = ref('');
 const source = ref(null);
 const status = ref(['DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED']);
+const data = reactive({
+  progress: null,
+});
+
+watch(
+  () => progress.dbPullFromRemote,
+  () => {
+    data.progress = progress.dbPullFromRemote;
+  }
+);
 
 loadGamesList();
 
@@ -18,6 +28,7 @@ async function loadGamesList() {
     // Fetch games from the main process
     loading.value = true;
     error.value = null;
+    data.progress = null;
 
     console.log('GamesList::loadGamesList fetching games');
     const response = await getGames();
@@ -32,6 +43,7 @@ async function loadGamesList() {
     error.value = 'Failed to load games: ' + error.message;
   } finally {
     loading.value = false;
+    data.progress = null;
   }
 }
 
@@ -72,6 +84,9 @@ const handleUpdateGameItem = (updatedGameItem) => {
       <h2 class="block text-3xl font-bold dark:text-white">
         <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Games Lib</span>
       </h2>
+      <div v-if="data.progress" class="flex-1 ml-4 dark:text-green-400">
+        {{ data.progress.percentage }} <span v-if="data.progress.transferred && data.progress.speed">({{ data.progress.transferred }} | {{ data.progress.speed }})</span>
+      </div>
 
       <button
         v-if="!loading"

@@ -28,11 +28,11 @@ import { getDownloadDetails, runPostDownloadActions } from './game.download';
 // ...
 // if the hash is NULL and the size is 0 then the game is not installed/present
 
-async function getGames() {
+async function getGames(progressCallback) {
   try {
     // step 1: get all the records from the database
     console.log('games::getGames: fetching DB games');
-    const gamesFromDbMap = await db_getAllGamesMap();
+    const gamesFromDbMap = await db_getAllGamesMap(progressCallback);
 
     // step 2: get all the records from steam
     console.log('games::getGames: fetching Steam games');
@@ -101,7 +101,7 @@ async function uploadIcon(steamAppId, filePath) {
     }
 
     const updatedGameItem = updateGameItemState(steamAppId, {
-      icon: resizedImage.toString('base64'),
+      icon: resizedImage,
     });
 
     return {
@@ -155,9 +155,9 @@ async function saveGameItem(steamAppId, gameItem) {
 
     console.log('games::saveGameItem: Game item local state:', gameItem.localState);
 
-    gameItem = updateGameItemState(steamAppId, updatedGameItem);
+    const savedGameItem = await createOrUpdateGameItem(steamAppId, updatedGameItem);
 
-    const savedGameItem = await createOrUpdateGameItem(steamAppId, gameItem);
+    gameItem = updateGameItemState(steamAppId, savedGameItem);
 
     if (!savedGameItem) {
       console.log('games::saveGameItem: Failed to save game item to the database');

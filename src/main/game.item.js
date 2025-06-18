@@ -1,4 +1,4 @@
-import { loadIconFromPath, makeIconFromDbIcon } from './game.icon';
+import { loadIconFromPath } from './game.icon';
 
 function makeGameItemFromDbItem(game) {
   return {
@@ -7,7 +7,7 @@ function makeGameItemFromDbItem(game) {
     steamExeTarget: game['steam_exe_target'],
     steamStartDir: game['steam_start_dir'],
     steamLaunchArgs: game['steam_launch_args'],
-    icon: makeIconFromDbIcon(game['icon']),
+    icon: game['icon'],
     gameLocation: game['game_location'],
     prefixLocation: game['prefix_location'],
     launcher: game['launcher'],

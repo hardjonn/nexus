@@ -1,13 +1,6 @@
 import { Conf } from 'electron-conf/main';
 
 const defaultConfig = {
-  db: {
-    host: 'nexus.host',
-    port: 9306,
-    user: '',
-    pass: '',
-    base: '',
-  },
   steam: {
     user_id: '',
     user_name: '',
@@ -20,11 +13,13 @@ const defaultConfig = {
     private_key_path: '/home/deck/.ssh/spb_truenas_nexus',
     games_path: 'Nexus/Games',
     prefixes_path: 'Nexus/Prefixes',
+    db_path: 'Nexus/DB',
     default_prefixes: 'default',
   },
   local_lib: {
     games_path: [{ label: 'SSD', path: 'Games' }],
     prefixes_path: '',
+    db_path: '/home/deck/Nexus/DB',
   },
   port_proton: {
     path: '~/.var/app/ru.linux_gaming.PortProton',
@@ -50,31 +45,6 @@ const defaultConfig = {
 const schema = {
   type: 'object',
   properties: {
-    db: {
-      type: 'object',
-      properties: {
-        host: {
-          type: 'string',
-          default: 'nexus.host',
-        },
-        port: {
-          type: 'number',
-          default: 9306,
-        },
-        user: {
-          type: 'string',
-          default: '',
-        },
-        pass: {
-          type: 'string',
-          default: '',
-        },
-        base: {
-          type: 'string',
-          default: '',
-        },
-      },
-    },
     steam: {
       type: 'object',
       properties: {
@@ -119,6 +89,10 @@ const schema = {
           type: 'string',
           default: 'Nexus/Prefixes',
         },
+        db_path: {
+          type: 'string',
+          default: 'Nexus/DB',
+        },
         default_prefixes: {
           type: 'string',
           default: 'default',
@@ -146,6 +120,10 @@ const schema = {
         prefixes_path: {
           type: 'string',
           default: '',
+        },
+        db_path: {
+          type: 'string',
+          default: '/home/deck/Nexus/DB',
         },
       },
     },
@@ -231,7 +209,6 @@ const conf = new Conf({ schema: schema, defaults: defaultConfig });
 
 function saveConfig(configData) {
   console.log('conf::saveConfig', configData);
-  conf.set('db', configData.db);
   conf.set('steam', configData.steam);
   conf.set('remote_lib', configData.remote_lib);
   conf.set('local_lib', configData.local_lib);
@@ -245,7 +222,6 @@ function saveConfig(configData) {
 function getConfig() {
   console.log('conf::getConfig');
   return {
-    db: conf.get('db'),
     steam: conf.get('steam'),
     remote_lib: conf.get('remote_lib'),
     local_lib: conf.get('local_lib'),
