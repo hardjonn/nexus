@@ -124,7 +124,11 @@ async function findAll(progressCallback) {
       if (file.endsWith('.json')) {
         const gameContent = fs.readFileSync(path.join(config.local_lib.db_path, file), 'utf-8');
         const game = dbModelParser(gameContent);
-        games.push(game);
+        if (game) {
+          games.push(game);
+        } else {
+          console.error('db::findAll: Error parsing game:', file);
+        }
       }
     }
 

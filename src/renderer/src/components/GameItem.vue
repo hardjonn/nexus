@@ -1238,7 +1238,21 @@ function makeRawGameItem() {
         </div>
       </div>
 
-      <div class="grid gap-6 grid-cols-[20fr_80fr] mb-2">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_20fr_10fr_18fr_10fr_18fr] p-2 border border-gray-600 rounded-lg">
+        <span class="text-l font-bold tracking-tight dark:text-white">Steam App Id: </span>
+        <span class="font-normal dark:text-gray-400">{{ data.gameItem.steamAppId }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Source: </span>
+        <span class="font-normal dark:text-gray-400">{{ data.gameItem.source }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">Status: </span>
+        <span class="font-normal dark:text-gray-400">{{ data.gameItem.status }}</span>
+
+        <span class="text-l font-bold tracking-tight dark:text-white">State: </span>
+        <span class="font-normal dark:text-yellow-400 col-span-5">{{ gameState }}</span>
+      </div>
+
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Title:</span>
         <input
           v-model="data.gameItem.steamTitle"
@@ -1246,9 +1260,7 @@ function makeRawGameItem() {
           class="border text-sm rounded-lg w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
           :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
-      </div>
 
-      <div class="grid gap-6 grid-cols-[20fr_80fr] mb-2">
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Title Local State:</span>
         <input
           v-model="data.gameItem.localState.steamTitle"
@@ -1258,21 +1270,7 @@ function makeRawGameItem() {
         />
       </div>
 
-      <div class="grid gap-6 grid-cols-3">
-        <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-          >Steam App Id: <span class="font-normal dark:text-gray-400">{{ data.gameItem.steamAppId }}</span></span
-        >
-
-        <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-          >Source: <span class="font-normal dark:text-gray-400">{{ data.gameItem.source }}</span></span
-        >
-
-        <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
-          >Status: <span class="font-normal dark:text-gray-400">{{ data.gameItem.status }}</span></span
-        >
-      </div>
-
-      <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Game Version/Build:</span>
         <input
           v-model="data.gameItem.version"
@@ -1287,33 +1285,6 @@ function makeRawGameItem() {
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
           :disabled="!isProcessingAction(processingActions.editingGameItem)"
         />
-      </div>
-
-      <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
-        <span class="text-l font-bold tracking-tight dark:text-white">Game State:</span>
-        <span class="font-normal dark:text-yellow-400">{{ gameState }}</span>
-
-        <!-- <span class="text-l font-bold tracking-tight dark:text-white">Local State:</span>
-        <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
-          <li v-for="state in localState" :key="state">{{ state }}</li>
-        </ul>
-
-        <span class="text-l font-bold tracking-tight dark:text-white">Remote State:</span>
-        <ul class="w-full space-y-1 text-gray-500 list-disc list-inside dark:text-gray-400">
-          <li v-for="state in remoteState" :key="state">{{ state }}</li>
-        </ul> -->
-
-        <span class="text-l font-bold tracking-tight dark:text-white">Errors</span>
-        <ul class="space-y-1 text-gray-500 list-inside dark:text-red-500">
-          <li v-for="error in data.gameItem.errors" :key="error.message" class="flex items-center">
-            <svg class="shrink-0 inline w-4 h-4 me-3 mt-[2px]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"
-              />
-            </svg>
-            {{ error.message }}
-          </li>
-        </ul>
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[22fr_30fr_20fr_28fr] p-2 border border-gray-600 rounded-lg">
@@ -1356,7 +1327,7 @@ function makeRawGameItem() {
         <span class="font-normal" :class="prefixSizeClass">{{ data.gameItem.remotePrefixSizeInBytes }} ({{ formattedSize(data.gameItem.remotePrefixSizeInBytes, 'B') }})</span>
       </div>
 
-      <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Steam Exe Target:</span>
         <input
           v-model="data.gameItem.steamExeTarget"
@@ -1411,7 +1382,7 @@ function makeRawGameItem() {
         </div>
       </div>
 
-      <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+      <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Game Path:</span>
         <span v-if="data.gameItem.source === 'db'" class="font-normal py-2.5 text-gray-400">{{ data.gameItem.realLocalGamePath }}</span>
         <input
