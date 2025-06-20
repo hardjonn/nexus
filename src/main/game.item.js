@@ -7,6 +7,8 @@ function makeGameItemFromDbItem(game) {
     steamExeTarget: game['steam_exe_target'],
     steamStartDir: game['steam_start_dir'],
     steamLaunchArgs: game['steam_launch_args'],
+    version: game['version'],
+    description: game['description'],
     icon: game['icon'],
     gameLocation: game['game_location'],
     prefixLocation: game['prefix_location'],
@@ -35,6 +37,8 @@ function makeGameItemFromSteamItem(shortcut) {
     // they will be populated later when saving the game
     // for example the start dir could look like this:
     // /home/deck/.var/app/ru.linux_gaming.PortProton/steam_scripts
+    version: null,
+    description: null,
     gameLocation: null, // gameLocation does not exist for steam entries
     prefixLocation: null, // prefixLocation does not exist for steam entries
     launcher: 'NOOP',

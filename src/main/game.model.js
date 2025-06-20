@@ -25,6 +25,14 @@ const schema = {
       type: 'string',
       nullable: true,
     },
+    version: {
+      type: 'string',
+      nullable: true,
+    },
+    description: {
+      type: 'string',
+      nullable: true,
+    },
     game_location: {
       type: 'string',
       nullable: true,

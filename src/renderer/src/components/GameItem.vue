@@ -194,49 +194,6 @@ const gameState = computed(() => {
   return 'Game Installed Locally --> Can Be Removed';
 });
 
-// const localState = computed(() => {
-//   const state = [];
-
-//   if (!data.gameItem.realLocalGamePath) {
-//     state.push('Game not found locally at any location: probably not installed');
-//   }
-
-//   if (!data.gameItem.realLocalPrefixPath) {
-//     state.push('Prefix not found locally at any location: probably not installed');
-//   }
-
-//   if (data.gameItem.hash === data.gameItem.localHash) {
-//     state.push('Local hash matches expected DB hash: game installed');
-//   } else {
-//     state.push('Local hash does not match expected DB hash: probably not installed or not fully downloaded');
-//   }
-
-//   if (data.gameItem.sizeInBytes === data.gameItem.localSizeInBytes) {
-//     state.push('Local size matches expected DB size: game installed');
-//   } else {
-//     state.push('Local size does not match expected DB size: probably not installed or not fully downloaded');
-//   }
-
-//   return state;
-// });
-// const remoteState = computed(() => {
-//   const state = [];
-
-//   if (!data.gameItem.hash) {
-//     state.push('No hash found in DB: game is not uploaded to remote');
-//   }
-
-//   if (data.gameItem.hash && data.gameItem.hash !== data.gameItem.remoteHash) {
-//     state.push('Remote hash does not match expected DB hash: probably noy fully uploaded');
-//   }
-
-//   if (data.gameItem.sizeInBytes !== data.gameItem.remoteSizeInBytes) {
-//     state.push('Remote size does not match expected DB size: probably noy fully uploaded');
-//   }
-
-//   return state;
-// });
-
 const shouldShowUploadToRemoteButton = computed(() => {
   if (data.gameItem.source === 'steam') {
     return false;
@@ -1313,6 +1270,23 @@ function makeRawGameItem() {
         <span class="mb-2 text-l font-bold tracking-tight dark:text-white"
           >Status: <span class="font-normal dark:text-gray-400">{{ data.gameItem.status }}</span></span
         >
+      </div>
+
+      <div class="grid mb-4 gap-2 grid-cols-[20fr_80fr] p-2 border border-gray-600 rounded-lg">
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Game Version/Build:</span>
+        <input
+          v-model="data.gameItem.version"
+          type="text"
+          class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
+        />
+
+        <span class="text-l font-bold tracking-tight py-2.5 dark:text-white">Game Description:</span>
+        <textarea
+          v-model="data.gameItem.description"
+          class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          :disabled="!isProcessingAction(processingActions.editingGameItem)"
+        />
       </div>
 
       <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">

@@ -6,6 +6,8 @@ CREATE TABLE `games` (
   `steam_exe_target` varchar(255) DEFAULT NULL,
   `steam_start_dir` varchar(255) DEFAULT NULL,
   `steam_launch_args` varchar(255) DEFAULT NULL,
+  `version` varchar(255) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
   `icon` longblob DEFAULT NULL,
   `game_location` varchar(255) DEFAULT NULL,
   `prefix_location` varchar(255) DEFAULT NULL,
