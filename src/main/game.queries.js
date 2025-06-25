@@ -10,7 +10,7 @@ async function db_getAllGamesMap(progressCallback) {
     // convert games to a map
     const gamesMap = {};
     for (const game of games) {
-      const steamAppId = game['steam_app_id'];
+      const steamAppId = String(game['steam_app_id']);
       gamesMap[steamAppId] = makeGameItemFromDbItem(game);
     }
 

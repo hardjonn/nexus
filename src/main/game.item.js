@@ -2,7 +2,7 @@ import { loadIconFromPath } from './game.icon';
 
 function makeGameItemFromDbItem(game) {
   return {
-    steamAppId: game['steam_app_id'],
+    steamAppId: String(game['steam_app_id']),
     steamTitle: game['steam_title'],
     steamExeTarget: game['steam_exe_target'],
     steamStartDir: game['steam_start_dir'],
@@ -14,9 +14,9 @@ function makeGameItemFromDbItem(game) {
     prefixLocation: game['prefix_location'],
     launcher: game['launcher'],
     launcherTarget: game['launcher_target'],
-    gameHash: game['game_hash'],
+    gameHash: String(game['game_hash']),
     gameSizeInBytes: game['game_size_in_bytes'],
-    prefixHash: game['prefix_hash'],
+    prefixHash: String(game['prefix_hash']),
     prefixSizeInBytes: game['prefix_size_in_bytes'],
     status: game['status'],
     // --- augmented fields ---
@@ -26,7 +26,7 @@ function makeGameItemFromDbItem(game) {
 
 function makeGameItemFromSteamItem(shortcut) {
   return {
-    steamAppId: shortcut['AppId'] ?? shortcut['appid'],
+    steamAppId: String(shortcut['AppId'] ?? shortcut['appid']),
     steamTitle: shortcut['AppName'] ?? shortcut['appname'],
     steamExeTarget: shortcut['Exe'] ?? shortcut['exe'],
     steamStartDir: shortcut['StartDir'] ?? shortcut['startdir'],

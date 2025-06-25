@@ -19,7 +19,7 @@ async function steam_getAllGamesMap() {
 
     for (const key in shortcutsMap) {
       const shortcut = shortcutsMap[key];
-      const steamAppId = shortcut['appid'];
+      const steamAppId = String(shortcut['appid']);
 
       gamesMap[steamAppId] = makeGameItemFromSteamItem(shortcut);
     }
