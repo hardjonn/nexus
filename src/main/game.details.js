@@ -187,7 +187,7 @@ async function getDirectoryHashAndSize(dirPath, shellExecutor) {
     }
 
     const hash = hashResult.stdout.trim();
-    if (!/^[0-9]{1-10}$/.test(hash)) {
+    if (!/^[0-9]{1,10}$/.test(hash)) {
       throw new Error(`Received invalid output for hash (expected CRC32 hash): "${hash}". Stderr: ${hashResult.stderr}`);
     }
     console.log(`game.details::getDirectoryHashAndSize: Calculated folder CRC32: ${hash}`);
