@@ -123,10 +123,13 @@ async function getLocalDirectoryHashAndSize(dirPath) {
 }
 
 // function that takes in a directory path on a remote NAS server
-// and returns an MD5 hash of the entire directory
+// and returns a hash of the entire directory
 // including all the nested files and folders,
 // for consistency it sorts the files and folders
-// before hashing them, the result is an MD5 hash
+// before hashing them, the result is a hash
+// the hash could be MD5/SHA1 or even CRC32
+// the CRC32 is much more performant and
+// completely fits the needs of this application
 async function getRemoteDirectoryHashAndSize(config, remoteDirPath) {
   const ssh = new NodeSSH();
 
@@ -184,10 +187,10 @@ async function getDirectoryHashAndSize(dirPath, shellExecutor) {
     }
 
     const hash = hashResult.stdout.trim();
-    if (!/^[a-f0-9]{32}$/.test(hash)) {
-      throw new Error(`Received invalid output for hash (expected MD5 hash): "${hash}". Stderr: ${hashResult.stderr}`);
+    if (!/^[0-9]{1-10}$/.test(hash)) {
+      throw new Error(`Received invalid output for hash (expected CRC32 hash): "${hash}". Stderr: ${hashResult.stderr}`);
     }
-    console.log(`game.details::getDirectoryHashAndSize: Calculated folder MD5: ${hash}`);
+    console.log(`game.details::getDirectoryHashAndSize: Calculated folder CRC32: ${hash}`);
 
     // --- Process Size Result ---
     if (sizeResult.stderr && !sizeResult.stdout.trim()) {
@@ -226,14 +229,14 @@ async function getDirectoryHashAndSize(dirPath, shellExecutor) {
 function makeDirectoryHashCommand(dirPath) {
   const escapedDirPath = `'${dirPath.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
 
-  // find all the files and execute md5sum on each file
+  // find all the files and execute cksum on each file
   // that generates an output of the form:
   // <hash> <filename>; c7826d06165bf4890ba638f23b066a6d  ./launch.json
   // we then strip the filename and sort the hashes
-  // and finally calculate the md5sum of the sorted hashes
-  // the final hash looks like this: f40911587f442d15cdaaa608209d778c  -
-  // remove the trailing " -" and keep only the hash
-  return `sh -c "cd ${escapedDirPath} && find . -type f -exec md5sum {} \\; | cut -d' ' -f1 | sort | md5sum | cut -d' ' -f1"`;
+  // and finally calculate the cksum of the sorted hashes
+  // the final hash looks like this: 3690370200 77
+  // remove the trailing " xx" and keep only the hash
+  return `sh -c "cd ${escapedDirPath} && find . -type f -exec cksum {} \\; | cut -d' ' -f1 | sort | cksum | cut -d' ' -f1"`;
 }
 
 function makeDirectorySizeCommand(dirPath) {

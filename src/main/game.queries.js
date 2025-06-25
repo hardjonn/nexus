@@ -64,9 +64,9 @@ async function db_updateGameItem(steamAppId, gameItem) {
       launcher: gameItem.launcher,
       launcher_target: gameItem.launcherTarget,
       status: gameItem.status,
-      game_hash_md5: gameItem.gameHash,
+      game_hash: gameItem.gameHash,
       game_size_in_bytes: gameItem.gameSizeInBytes,
-      prefix_hash_md5: gameItem.prefixHash,
+      prefix_hash: gameItem.prefixHash,
       prefix_size_in_bytes: gameItem.prefixSizeInBytes,
     };
 
@@ -102,9 +102,9 @@ async function db_createGameItemFromSteamData(steamAppId, gameItem) {
       launcher: gameItem.launcher,
       launcher_target: gameItem.launcherTarget,
       status: gameItem.status,
-      game_hash_md5: gameItem.gameHash,
+      game_hash: gameItem.gameHash,
       game_size_in_bytes: gameItem.gameSizeInBytes,
-      prefix_hash_md5: gameItem.prefixHash,
+      prefix_hash: gameItem.prefixHash,
       prefix_size_in_bytes: gameItem.prefixSizeInBytes,
     });
 

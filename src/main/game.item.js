@@ -14,9 +14,9 @@ function makeGameItemFromDbItem(game) {
     prefixLocation: game['prefix_location'],
     launcher: game['launcher'],
     launcherTarget: game['launcher_target'],
-    gameHash: game['game_hash_md5'],
+    gameHash: game['game_hash'],
     gameSizeInBytes: game['game_size_in_bytes'],
-    prefixHash: game['prefix_hash_md5'],
+    prefixHash: game['prefix_hash'],
     prefixSizeInBytes: game['prefix_size_in_bytes'],
     status: game['status'],
     // --- augmented fields ---

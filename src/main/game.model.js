@@ -48,14 +48,14 @@ const schema = {
       type: 'string',
       nullable: true,
     },
-    game_hash_md5: {
+    game_hash: {
       type: 'string',
       nullable: true,
     },
     game_size_in_bytes: {
       type: 'int32',
     },
-    prefix_hash_md5: {
+    prefix_hash: {
       type: 'string',
       nullable: true,
     },
