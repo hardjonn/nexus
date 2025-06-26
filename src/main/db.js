@@ -128,6 +128,7 @@ async function findAll(progressCallback) {
           games.push(game);
         } else {
           console.error('db::findAll: Error parsing game:', file);
+          console.log('db::findAll: game content', gameContent);
         }
       }
     }

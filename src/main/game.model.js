@@ -53,14 +53,14 @@ const schema = {
       nullable: true,
     },
     game_size_in_bytes: {
-      type: 'int32',
+      type: 'float64',
     },
     prefix_hash: {
       type: 'string',
       nullable: true,
     },
     prefix_size_in_bytes: {
-      type: 'int32',
+      type: 'float64',
     },
     status: {
       enum: ['DRAFT', 'UPLOADING', 'ACTIVE', 'INACTIVE', 'ARCHIVED'],
