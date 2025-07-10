@@ -1384,9 +1384,7 @@ function makeRawGameItem() {
 
       <div class="grid mb-4 gap-2 grid-cols-[22fr_78fr] p-2 border border-gray-600 rounded-lg">
         <span class="text-l font-bold py-2.5 tracking-tight dark:text-white">Real Local Game Path:</span>
-        <span v-if="data.gameItem.source === 'db'" class="font-normal py-2.5 text-gray-400">{{ data.gameItem.realLocalGamePath }}</span>
         <input
-          v-if="data.gameItem.source === 'steam'"
           v-model="data.gameItem.realLocalGamePath"
           type="text"
           class="border text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"

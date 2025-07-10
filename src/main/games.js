@@ -157,7 +157,7 @@ async function saveGameItem(steamAppId, gameItem) {
 
     const savedGameItem = await createOrUpdateGameItem(steamAppId, updatedGameItem);
 
-    gameItem = updateGameItemState(steamAppId, savedGameItem);
+    gameItem = updateGameItemState(steamAppId, gameItem);
 
     if (!savedGameItem) {
       console.log('games::saveGameItem: Failed to save game item to the database');
