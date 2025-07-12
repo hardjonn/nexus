@@ -135,6 +135,7 @@ async function createOrUpdateGameItem(steamAppId, gameItem) {
 }
 
 // todo: rework the flow
+// make sure the local prefix location is present
 async function saveGameItem(steamAppId, gameItem) {
   console.log('games::saveGameItem: Saving game item:', steamAppId, gameItem);
 

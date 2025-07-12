@@ -199,6 +199,10 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
+  if (data.gameItem.status === 'ACTIVE' && (data.gameItem.localGameHash !== data.gameItem.remoteGameHash || data.gameItem.localPrefixHash !== data.gameItem.remotePrefixHash)) {
+    return true;
+  }
+
   if (data.gameItem.status !== 'DRAFT' && data.gameItem.status !== 'UPLOADING') {
     return false;
   }
