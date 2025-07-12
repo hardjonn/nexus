@@ -257,15 +257,16 @@ async function abortRsyncTransfer(itemId) {
 // the game is available for upload only when it's in DRAFT/UPDATING state
 async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   // run some validations
-  if (gameItem.source !== 'db' || (gameItem.status !== 'DRAFT' && gameItem.status !== 'UPLOADING')) {
-    console.log('games::uploadGameToRemote: Game is not in DRAFT state');
-    return {
-      status: 'error',
-      error: {
-        message: 'Game is not in DRAFT state',
-      },
-    };
-  }
+  // TODO: re-evaluate this -- need an ability to upload a game even if it's not in DRAFT state
+  // if (gameItem.source !== 'db' || (gameItem.status !== 'DRAFT' && gameItem.status !== 'UPLOADING')) {
+  //   console.log('games::uploadGameToRemote: Game is not in DRAFT state');
+  //   return {
+  //     status: 'error',
+  //     error: {
+  //       message: 'Game is not in DRAFT state',
+  //     },
+  //   };
+  // }
 
   const prevGameItem = getGameItemState(steamAppId);
 
