@@ -134,6 +134,7 @@ async function createOrUpdateGameItem(steamAppId, gameItem) {
   return await db_updateGameItem(steamAppId, gameItem);
 }
 
+// todo: rework the flow
 async function saveGameItem(steamAppId, gameItem) {
   console.log('games::saveGameItem: Saving game item:', steamAppId, gameItem);
 
@@ -156,6 +157,7 @@ async function saveGameItem(steamAppId, gameItem) {
     console.log('games::saveGameItem: Game item local state:', gameItem.localState);
 
     const savedGameItem = await createOrUpdateGameItem(steamAppId, updatedGameItem);
+    gameItem.source = savedGameItem.source;
 
     gameItem = updateGameItemState(steamAppId, gameItem);
 
