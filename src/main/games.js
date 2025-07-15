@@ -13,6 +13,7 @@ import {
   getGameAndPrefixPathForDownload,
   getLocalDirectoryHashAndSize,
   getRemoteDirectoryHashAndSize,
+  makeRealLocalPrefixPath,
 } from './game.details';
 import { getDownloadDetails, runPostDownloadActions } from './game.download';
 
@@ -159,6 +160,7 @@ async function saveGameItem(steamAppId, gameItem) {
 
     const savedGameItem = await createOrUpdateGameItem(steamAppId, updatedGameItem);
     gameItem.source = savedGameItem.source;
+    gameItem.realLocalPrefixPath = makeRealLocalPrefixPath(savedGameItem.prefixLocation);
 
     gameItem = updateGameItemState(steamAppId, gameItem);
 
@@ -253,20 +255,31 @@ async function abortRsyncTransfer(itemId) {
 // the idea it that the game item is uploaded only once in the beginning
 // when it's created we also upload the default prefix if needed (for PORT_PROTON)
 // after that the prefix is frozen and cannot be changed
-// unless it'e enforced by the user
+// unless it's enforced by the user
 // the game is available for upload only when it's in DRAFT/UPDATING state
 async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
   // run some validations
-  // TODO: re-evaluate this -- need an ability to upload a game even if it's not in DRAFT state
-  // if (gameItem.source !== 'db' || (gameItem.status !== 'DRAFT' && gameItem.status !== 'UPLOADING')) {
-  //   console.log('games::uploadGameToRemote: Game is not in DRAFT state');
-  //   return {
-  //     status: 'error',
-  //     error: {
-  //       message: 'Game is not in DRAFT state',
-  //     },
-  //   };
-  // }
+
+  if (gameItem.source !== 'db') {
+    console.log('games::uploadGameToRemote: Game is not in the DB');
+    return {
+      status: 'error',
+      error: {
+        message: 'Game is not in the DB. Add to the Database first',
+      },
+    };
+  }
+
+  // if the game status is not present in the array of the allowed values
+  if (!['DRAFT', 'UPLOADING', 'ACTIVE'].includes(gameItem.status)) {
+    console.log('games::uploadGameToRemote: Game status is not allowed');
+    return {
+      status: 'error',
+      error: {
+        message: 'Game status is not allowed',
+      },
+    };
+  }
 
   const prevGameItem = getGameItemState(steamAppId);
 

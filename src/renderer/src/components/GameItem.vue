@@ -199,35 +199,15 @@ const shouldShowUploadToRemoteButton = computed(() => {
     return false;
   }
 
+  if (isProcessingAnyAction()) {
+    return false;
+  }
+
   if (data.gameItem.status === 'ACTIVE' && (data.gameItem.localGameHash !== data.gameItem.remoteGameHash || data.gameItem.localPrefixHash !== data.gameItem.remotePrefixHash)) {
     return true;
   }
 
   if (data.gameItem.status !== 'DRAFT' && data.gameItem.status !== 'UPLOADING') {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.editingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.savingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.syncSteamState)) {
     return false;
   }
 
@@ -243,39 +223,7 @@ const shouldShowRefreshHashAndSizeButton = computed(() => {
     return false;
   }
 
-  if (isProcessingAction(processingActions.editingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.savingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDeletion)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDownload)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.syncSteamState)) {
+  if (isProcessingAnyAction()) {
     return false;
   }
 
@@ -291,43 +239,7 @@ const shouldShowDeleteGameFromLocalButton = computed(() => {
     return false;
   }
 
-  if (isProcessingAction(processingActions.editingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.savingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDeletion)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDownload)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.syncSteamState)) {
+  if (isProcessingAnyAction()) {
     return false;
   }
 
@@ -355,39 +267,7 @@ const shouldShowDownloadGameButton = computed(() => {
     return false;
   }
 
-  if (isProcessingAction(processingActions.editingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.savingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDeletion)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDownload)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.syncSteamState)) {
+  if (isProcessingAnyAction()) {
     return false;
   }
 
@@ -403,39 +283,7 @@ const shouldShowSyncSteamStateButton = computed(() => {
     return false;
   }
 
-  if (isProcessingAction(processingActions.editingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.savingGameItem)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.uploadingGameToRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.refreshingHashAndSize)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDeletion)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.deletingGameFromLocal)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.initGameDownload)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.downloadingGameFromRemote)) {
-    return false;
-  }
-
-  if (isProcessingAction(processingActions.requestingDownloadDetails)) {
+  if (isProcessingAnyAction()) {
     return false;
   }
 
@@ -503,6 +351,10 @@ async function onUploadIcon() {
 
 function isProcessingAction(action) {
   return data.processingAction === action;
+}
+
+function isProcessingAnyAction() {
+  return data.processingAction !== null;
 }
 
 function onActionEdit() {
