@@ -357,9 +357,9 @@ async function uploadGameToRemote(steamAppId, gameItem, progressCallback) {
 
   try {
     // 2. upload the prefix if needed
-    //  - the launcher has to be PORT_PROTON
+    //  - the prefix has to be present
     //  - the remote default prefix has to be empty - record in the DB should not exist
-    if (gameItem.launcher === 'PORT_PROTON' && !gameItem.prefixHash && localPrefixPath && remotePrefixPath) {
+    if (!gameItem.prefixHash && localPrefixPath && remotePrefixPath) {
       console.log('games::uploadGameToRemote: Uploading prefix...');
 
       await uploadWithRsync({
