@@ -188,10 +188,10 @@ async function getDirectoryHashAndSize(dirPath, shellExecutor) {
 
     // validate that hash is a valid MD5 hash (32 hex characters)
     const hash = hashResult.stdout.trim();
-    if (!/^[0-9a-f]{32}$/.test(hash)) {
-      throw new Error(`Received invalid output for hash (expected MD5 hash): "${hash}". Stderr: ${hashResult.stderr}`);
+    if (!/^[0-9]{1,10}$/.test(hash)) {
+      throw new Error(`Received invalid output for hash (expected CRC32 hash): "${hash}". Stderr: ${hashResult.stderr}`);
     }
-    console.log(`game.details::getDirectoryHashAndSize: Calculated folder MD5: ${hash}`);
+    console.log(`game.details::getDirectoryHashAndSize: Calculated folder CRC32: ${hash}`);
 
     // --- Process Size Result ---
     if (sizeResult.stderr && !sizeResult.stdout.trim()) {
@@ -227,7 +227,7 @@ async function getDirectoryHashAndSize(dirPath, shellExecutor) {
   }
 }
 
-function makeDirectoryHashCommandCRC32(dirPath) {
+function makeDirectoryHashCommand(dirPath) {
   const escapedDirPath = `'${dirPath.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
 
   // find all the files and execute cksum on each file
@@ -237,17 +237,7 @@ function makeDirectoryHashCommandCRC32(dirPath) {
   // and finally calculate the cksum of the sorted hashes
   // the final hash looks like this: 3690370200 77
   // remove the trailing " xx" and keep only the hash
-  return `sh -c "cd ${escapedDirPath} && find . -type f -exec cksum {} \\; | cut -d' ' -f1 | sort | cksum | cut -d' ' -f1"`;
-}
-
-function makeDirectoryHashCommand(dirPath) {
-  const escapedDirPath = `'${dirPath.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
-
-  // find all the files and execute a metadata based hash calculation
-  // the goal is to use a combination of the last modified time and the size of the file
-  // to calculate a hash that is unique to the file
-  // the hash is then sorted and the final hash is calculated
-  return `sh -c "cd ${escapedDirPath} && find . -type f -print0 | xargs -0 stat -c '%Y:%s:%n' 2>/dev/null | sort | md5sum | awk '{ print $1 }'"`;
+  return `sh -c "cd ${escapedDirPath} && find . -type f -print0 | xargs -0 stat -c '%Y:%s:%n' 2>/dev/null | sort | cksum | cut -d' ' -f1"`;
 }
 
 function makeDirectorySizeCommand(dirPath) {
