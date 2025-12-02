@@ -237,7 +237,7 @@ function makeDirectoryHashCommand(dirPath) {
   // the file name/path has to be lower cased to get consistent results
   // the final hash looks like this: 3690370200 77
   // remove the trailing " xx" and keep only the hash
-  return `sh -c "cd ${escapedDirPath} && find . -type f -print0 | xargs -0 stat -c '%Y:%s:%n' 2>/dev/null | awk '{print tolower(\\$0)}' | sort | cksum | cut -d' ' -f1"`;
+  return `sh -c "cd ${escapedDirPath} && find . -type f -print0 | xargs -0 stat -c '%Y:%s:%n' 2>/dev/null | awk '{print tolower(\\$0)}' | LC_ALL=C sort | cksum | cut -d' ' -f1"`;
 }
 
 function makeDirectorySizeCommand(dirPath) {
