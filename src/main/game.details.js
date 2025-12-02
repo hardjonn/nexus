@@ -231,13 +231,13 @@ function makeDirectoryHashCommand(dirPath) {
   const escapedDirPath = `'${dirPath.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
 
   // find all the files and execute cksum on each file
-  // that generates an output of the form:
-  // <hash> <filename>; c7826d06165bf4890ba638f23b066a6d  ./launch.json
-  // we then strip the filename and sort the hashes
-  // and finally calculate the cksum of the sorted hashes
+  // the hash is based on the file metadata such as last modified date, size and the filename
+  // one line looks like timestamp:size:relative path
+  // we then sort the lines and finally calculate the cksum
+  // the file name/path has to be lower cased to get consistent results
   // the final hash looks like this: 3690370200 77
   // remove the trailing " xx" and keep only the hash
-  return `sh -c "cd ${escapedDirPath} && find . -type f -print0 | xargs -0 stat -c '%Y:%s:%n' 2>/dev/null | sort | cksum | cut -d' ' -f1"`;
+  return `sh -c "cd ${escapedDirPath} && find . -type f -print0 | xargs -0 stat -c '%Y:%s:%n' 2>/dev/null | awk '{print tolower(\\$0)}' | sort | cksum | cut -d' ' -f1"`;
 }
 
 function makeDirectorySizeCommand(dirPath) {
