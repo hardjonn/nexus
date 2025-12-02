@@ -186,11 +186,12 @@ async function getDirectoryHashAndSize(dirPath, shellExecutor) {
       throw new Error(`Shell hash command produced no output. Check path and permissions: ${dirPath}. Stderr: ${hashResult.stderr}`);
     }
 
+    // validate that hash is a valid MD5 hash (32 hex characters)
     const hash = hashResult.stdout.trim();
-    if (!/^[0-9]{1,10}$/.test(hash)) {
-      throw new Error(`Received invalid output for hash (expected CRC32 hash): "${hash}". Stderr: ${hashResult.stderr}`);
+    if (!/^[0-9a-f]{32}$/.test(hash)) {
+      throw new Error(`Received invalid output for hash (expected MD5 hash): "${hash}". Stderr: ${hashResult.stderr}`);
     }
-    console.log(`game.details::getDirectoryHashAndSize: Calculated folder CRC32: ${hash}`);
+    console.log(`game.details::getDirectoryHashAndSize: Calculated folder MD5: ${hash}`);
 
     // --- Process Size Result ---
     if (sizeResult.stderr && !sizeResult.stdout.trim()) {
