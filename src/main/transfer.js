@@ -307,7 +307,7 @@ async function getListOfPrefixesOnRemote(host, username, privateKeyPath, prefixe
     const escapedPrefixesBasePath = `'${prefixesBasePath.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
     const escapedPrefixLocation = `'${prefixLocation.replace(/'/g, "'\\''")}'`; // Basic quoting for shell
 
-    const listDirCommand = `sh -c "find ${escapedPrefixesBasePath} -type d -iname ${escapedPrefixLocation}"`;
+    const listDirCommand = `sh -c "find ${escapedPrefixesBasePath} -maxdepth 2 -type d -iname ${escapedPrefixLocation}"`;
 
     console.log('transfer::getListOfPrefixesOnRemote: LISTDIR Command:', listDirCommand);
 
