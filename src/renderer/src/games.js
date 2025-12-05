@@ -10,6 +10,10 @@ function saveGameItem(steamAppId, gameItem) {
   return window.gamesAPI.saveGameItem(steamAppId, gameItem);
 }
 
+function syncLocalHashToRemote(steamAppId, gameItem) {
+  return window.gamesAPI.syncLocalHashToRemote(steamAppId, gameItem);
+}
+
 function uploadGameToRemote(steamAppId, gameItem) {
   return window.gamesAPI.uploadGameToRemote(steamAppId, gameItem);
 }
@@ -46,6 +50,7 @@ export {
   getGames,
   uploadIcon,
   saveGameItem,
+  syncLocalHashToRemote,
   uploadGameToRemote,
   abortGameUpload,
   refreshHashAndSize,

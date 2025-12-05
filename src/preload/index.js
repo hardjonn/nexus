@@ -50,6 +50,7 @@ const gamesAPI = {
   getGames: () => electronAPI.ipcRenderer.invoke('games/get'),
   uploadIcon: (steamAppId, filePath) => electronAPI.ipcRenderer.invoke('games/icon/upload', steamAppId, filePath),
   saveGameItem: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/save', steamAppId, gameItem),
+  syncLocalHashToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/sync_local_hash_to_remote', steamAppId, gameItem),
   uploadGameToRemote: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/upload', steamAppId, gameItem),
   abortGameUpload: (steamAppId) => electronAPI.ipcRenderer.invoke('games/item/abort_rsync_transfer', steamAppId),
   refreshHashAndSize: (steamAppId, gameItem) => electronAPI.ipcRenderer.invoke('games/item/refresh_hash_and_size', steamAppId, gameItem),

@@ -11,6 +11,7 @@ import {
   getGames,
   uploadIcon,
   saveGameItem,
+  syncLocalHashToRemote,
   uploadGameToRemote,
   abortRsyncTransfer,
   calculateHashAndSize,
@@ -226,6 +227,10 @@ ipcMain.handle('games/icon/upload', async (event, steamAppId, filePath) => {
 
 ipcMain.handle('games/item/save', async (event, steamAppId, gameItem) => {
   return await saveGameItem(steamAppId, gameItem);
+});
+
+ipcMain.handle('games/item/sync_local_hash_to_remote', async (event, steamAppId, gameItem) => {
+  return await syncLocalHashToRemote(steamAppId, gameItem);
 });
 
 ipcMain.handle('games/item/upload', async (event, steamAppId, gameItem) => {

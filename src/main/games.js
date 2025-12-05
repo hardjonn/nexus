@@ -189,6 +189,36 @@ async function saveGameItem(steamAppId, gameItem) {
   }
 }
 
+async function syncLocalHashToRemote(steamAppId, gameItem) {
+  console.log('games::syncLocalHashToRemote: Syncing local hash to remote:', steamAppId, gameItem);
+
+  const prevGameItem = getGameItemState(steamAppId);
+
+  console.log('games::syncLocalHashToRemote: Previous game item:', prevGameItem);
+
+  try {
+    gameItem.gameHash = gameItem.localGameHash;
+    gameItem.prefixHash = gameItem.localPrefixHash;
+
+    const updatedGameItem = await db_updateGameItem(steamAppId, gameItem);
+
+    gameItem = updateGameItemState(steamAppId, updatedGameItem);
+
+    return {
+      status: 'success',
+      gameItem: gameItem,
+    };
+  } catch (error) {
+    console.error('games::syncLocalHashToRemote: Error syncing local hash to remote:', error);
+    return {
+      status: 'error',
+      error: {
+        message: 'Failed to sync local hash to remote: ' + error,
+      },
+    };
+  }
+}
+
 function validateGameItem(gameItem) {
   const errors = [];
 
@@ -833,6 +863,7 @@ export {
   getGames,
   uploadIcon,
   saveGameItem,
+  syncLocalHashToRemote,
   uploadGameToRemote,
   abortRsyncTransfer,
   calculateHashAndSize,

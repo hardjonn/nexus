@@ -4,6 +4,7 @@ const { webUtils } = require('electron');
 import {
   uploadIcon,
   saveGameItem,
+  syncLocalHashToRemote,
   uploadGameToRemote,
   abortGameUpload,
   refreshHashAndSize,
@@ -28,6 +29,7 @@ const processingActions = {
   requestingDownloadDetails: 'Requesting download details...',
   abortingGameDownload: 'Aborting game download...',
   syncSteamState: 'Syncing Steam state...',
+  syncingLocalHashToRemote: 'Syncing local hash to remote...',
 };
 
 const props = defineProps({
@@ -396,6 +398,40 @@ async function onActionSave() {
   } catch (error) {
     console.error('Error saving the game item:', error);
     data.errorMessage = 'An error occurred while saving the game item:' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
+async function onActionSyncLocalHashToRemote() {
+  activateProcessingAction(processingActions.syncingLocalHashToRemote);
+
+  try {
+    const rawGameItem = makeRawGameItem();
+    console.log('onActionSyncLocalHashToRemote: Raw Game Item: ', rawGameItem);
+
+    const response = await syncLocalHashToRemote(data.gameItem.steamAppId, rawGameItem);
+    console.log('onActionSyncLocalHashToRemote: Response: ', response);
+
+    if (!response) {
+      console.error('No response from onActionSyncLocalHashToRemote');
+      data.errorMessage = 'Something went wrong while syncing the local hash to remote.';
+      return;
+    }
+
+    if (response.status !== 'success') {
+      console.error('Syncing local hash to remote failed:', response);
+      data.errorMessage = response.error.message || 'Something went wrong while syncing the local hash to remote.';
+      data.errors = response.error.errors;
+      return;
+    }
+
+    data.successMessage = 'Local hash synced to remote successfully!';
+
+    emit('update-game-item', response.gameItem);
+  } catch (error) {
+    console.error('Error syncing the local hash to remote:', error);
+    data.errorMessage = 'An error occurred while syncing the local hash to remote:' + error.message;
   } finally {
     data.processingAction = null;
   }
@@ -845,6 +881,15 @@ function makeRawGameItem() {
           @click="onActionSave"
         >
           Save to DB
+        </button>
+
+        <button
+          v-if="isProcessingAction(processingActions.editingGameItem)"
+          type="button"
+          class="text-white w-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 hover:bg-gradient-to-br dark:focus:ring-blue-800 shadow-lg dark:shadow-lg dark:shadow-blue-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="onActionSyncLocalHashToRemote"
+        >
+          Sync Local Hash to Remote
         </button>
 
         <button
