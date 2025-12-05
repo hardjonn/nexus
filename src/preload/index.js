@@ -25,6 +25,18 @@ function notifyErrorObservers(data) {
   errorObservers.forEach((observer) => observer(data));
 }
 
+// console observers lit
+const consoleLogObservers = [];
+
+function addObserverToConsoleLog(consoleLogObserver) {
+  console.log('consoleLog observers list', consoleLogObservers);
+  consoleLogObservers.push(consoleLogObserver);
+}
+
+function notifyConsoleLogObservers(data) {
+  consoleLogObservers.forEach((observer) => observer(data));
+}
+
 // Custom APIs for renderer
 const api = {};
 
@@ -75,14 +87,23 @@ const errorAPI = {
   subscribeToErrorUpdates: (errorObserver) => addObserverToError(errorObserver),
 };
 
+const consoleAPI = {
+  subscribeToConsoleLogUpdates: (consoleLogObserver) => addObserverToConsoleLog(consoleLogObserver),
+};
+
 electronAPI.ipcRenderer.on('progress', (event, data) => {
-  console.log('progress', data);
+  console.log('ON progress', data);
   notifyProgressObservers(data);
 });
 
 electronAPI.ipcRenderer.on('error', (event, data) => {
-  console.log('error', data);
+  console.log('ON error', data);
   notifyErrorObservers(data);
+});
+
+electronAPI.ipcRenderer.on('consoleLog', (event, data) => {
+  console.log('ON consoleLog', data);
+  notifyConsoleLogObservers(data);
 });
 
 // Use `contextBridge` APIs to expose Electron APIs to
@@ -98,6 +119,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('updateAPI', updateAPI);
     contextBridge.exposeInMainWorld('integrationAPI', integrationAPI);
     contextBridge.exposeInMainWorld('errorAPI', errorAPI);
+    contextBridge.exposeInMainWorld('consoleAPI', consoleAPI);
   } catch (error) {
     console.error(error);
   }
@@ -110,4 +132,5 @@ if (process.contextIsolated) {
   window.updateAPI = updateAPI;
   window.integrationAPI = integrationAPI;
   window.errorAPI = errorAPI;
+  window.consoleAPI = consoleAPI;
 }

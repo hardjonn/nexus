@@ -5,6 +5,7 @@ import Tab from './components/Tab.vue';
 import GamesList from './components/GamesList.vue';
 import Backup from './components/Backup.vue';
 import About from './components/About.vue';
+import Logs from './components/Logs.vue';
 </script>
 
 <template>
@@ -19,6 +20,7 @@ import About from './components/About.vue';
       </Tab>
       <Tab title="Backup" name="backup"><Backup /></Tab>
       <Tab title="About" name="about"><About /></Tab>
+      <Tab title="Logs" name="logs"><Logs /></Tab>
     </Tabs>
   </div>
 </template>

@@ -87,6 +87,25 @@ function createWindow() {
   progressCallback = (data) => mainWindow.webContents.send('progress', data);
   errorCallback = (data) => mainWindow.webContents.send('error', data);
 
+  // Overwrite console.log in main process to send to renderer
+  const originalConsoleLog = console.log.bind(console);
+  console.log = (...args) => {
+    const message = args.map((arg) => safeStringify(arg)).join(' ');
+    mainWindow.webContents.send('consoleLog', message);
+
+    originalConsoleLog(...args);
+  };
+
+  // Overwrite console.error in main process to send to renderer
+  const originalConsoleError = console.error.bind(console);
+  console.error = (...args) => {
+    // const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
+    const message = args.map((arg) => safeStringify(arg)).join(' ');
+    mainWindow.webContents.send('consoleLog', message);
+
+    originalConsoleError(...args);
+  };
+
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -126,6 +145,51 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+function safeStringify(data) {
+  // Handle simple types first
+  if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean' || data === null || data === undefined) {
+    // For strings, wrap in quotes manually if needed, otherwise just return the value.
+    if (typeof data === 'string') {
+      return JSON.stringify(data); // Ensures proper escaping
+    }
+    return String(data);
+  }
+
+  // Use JSON.stringify with a custom replacer to handle complex objects
+  try {
+    return JSON.stringify(data, (key, value) => {
+      // Handle BigInt by converting to string
+      if (typeof value === 'bigint') {
+        return value.toString() + 'n'; // append 'n' for clarity
+      }
+      // Handle Error objects by extracting useful properties
+      if (value instanceof Error) {
+        // Return an object with enumerable properties
+        return Object.getOwnPropertyNames(value).reduce((obj, prop) => {
+          obj[prop] = value[prop];
+          return obj;
+        }, {});
+      }
+      // Handle circular references (basic prevention within the replacer)
+      // A more robust solution for complex circularity might need a library
+      // but this simple check helps prevent immediate errors during general stringification.
+      // NOTE: JSON.stringify itself will throw a TypeError for complex circularity if
+      // the replacer doesn't fully handle it, but we catch that below.
+      return value;
+    });
+  } catch (error) {
+    // Catch the TypeError if a circular structure or other non-JSON-safe
+    // issue persists (e.g. BigInt not caught by the replacer).
+    if (error instanceof TypeError) {
+      // Fallback for objects that cannot be natively stringified (e.g. complex circulars, DOM nodes)
+      // Use a basic representation to avoid crashing the process.
+      return `[Unstringifiable Object or Circular Reference: ${error.message}]`;
+    }
+    // Re-throw other errors
+    throw error;
+  }
+}
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
