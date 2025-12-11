@@ -142,6 +142,9 @@ async function runPostDownloadAction_PortProton(config, gameItem) {
     console.log('games::runPostDownloadAction_PortProton: Template:', template);
 
     fs.writeFileSync(portProtonScriptLocation, template);
+
+    // add execute permissions
+    fs.chmodSync(portProtonScriptLocation, 0o755);
   } catch (error) {
     console.error('games::runPostDownloadAction_PortProton: Error running post download action for Port Proton:', error);
     throw error;
