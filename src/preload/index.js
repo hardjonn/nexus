@@ -84,6 +84,16 @@ const integrationAPI = {
   addDesktopEntry: () => electronAPI.ipcRenderer.invoke('integration/add_desktop_entry'),
 };
 
+const deckyAPI = {
+  getDeckyThemes: () => electronAPI.ipcRenderer.invoke('decky/get_themes'),
+  updateDeckyTheme: (theme) => electronAPI.ipcRenderer.invoke('decky/update_theme', theme),
+  installDeckyTheme: (theme) => electronAPI.ipcRenderer.invoke('decky/install_theme', theme),
+};
+
+const appAPI = {
+  appQuit: () => electronAPI.ipcRenderer.invoke('app/quit'),
+};
+
 const errorAPI = {
   subscribeToErrorUpdates: (errorObserver) => addObserverToError(errorObserver),
 };
@@ -119,6 +129,8 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('backupAPI', backupAPI);
     contextBridge.exposeInMainWorld('updateAPI', updateAPI);
     contextBridge.exposeInMainWorld('integrationAPI', integrationAPI);
+    contextBridge.exposeInMainWorld('deckyAPI', deckyAPI);
+    contextBridge.exposeInMainWorld('appAPI', appAPI);
     contextBridge.exposeInMainWorld('errorAPI', errorAPI);
     contextBridge.exposeInMainWorld('consoleAPI', consoleAPI);
   } catch (error) {
@@ -132,6 +144,8 @@ if (process.contextIsolated) {
   window.backupAPI = backupAPI;
   window.updateAPI = updateAPI;
   window.integrationAPI = integrationAPI;
+  window.deckyAPI = deckyAPI;
+  window.appAPI = appAPI;
   window.errorAPI = errorAPI;
   window.consoleAPI = consoleAPI;
 }

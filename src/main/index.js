@@ -7,6 +7,7 @@ import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_Ac
 import { backupPrefixes, backupCustomLocation, abortBackupTransfer, backupAllCustomLocations } from './backup';
 import { checkForUpdates, getCurrentVersion, downloadUpdate, installUpdate } from './update';
 import { addDesktopEntry } from './integration';
+import { getDeckyThemes, updateDeckyTheme, installDeckyTheme } from './decky';
 import {
   getGames,
   uploadIcon,
@@ -311,4 +312,24 @@ ipcMain.handle('update/install', async () => {
 ipcMain.handle('integration/add_desktop_entry', async () => {
   console.log('integration/add_desktop_entry');
   return await addDesktopEntry();
+});
+
+ipcMain.handle('decky/get_themes', async () => {
+  console.log('decky/get_themes');
+  return await getDeckyThemes();
+});
+
+ipcMain.handle('decky/install_theme', async (event, theme) => {
+  console.log('decky/install_theme', theme);
+  return await installDeckyTheme(theme);
+});
+
+ipcMain.handle('decky/update_theme', async (event, theme) => {
+  console.log('decky/update_theme', theme);
+  return await updateDeckyTheme(theme);
+});
+
+ipcMain.handle('app/quit', async () => {
+  console.log('app/quit');
+  app.quit();
 });

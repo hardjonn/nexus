@@ -21,6 +21,7 @@ const saveOptions = () => {
     backup: toRaw(store.backup),
     port_proton: toRaw(store.port_proton),
     emulation: toRaw(store.emulation),
+    decky: toRaw(store.decky),
   };
 
   saving.value = true;
@@ -288,6 +289,61 @@ const saveOptions = () => {
           placeholder="Emulation Path"
           required
         />
+      </div>
+    </div>
+
+    <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">
+      <span class="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">Decky Loader Settings</span>
+    </h2>
+    <div class="grid gap-6 mb-6 md:grid-cols-2">
+      <div>
+        <label for="decky_theme_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Decky Theme Path</label>
+        <input
+          id="decky_theme_path"
+          v-model="store.decky.theme.path"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Decky Theme Path"
+          required
+        />
+      </div>
+    </div>
+    <div class="inline-flex items-center mb-4">
+      <h3 for="decke_theme_repos" class="block mb-2 flex-grow mr-4 text-2xl font-medium text-gray-900 dark:text-white">Decky Theme Repos</h3>
+      <button
+        type="button"
+        class="text-white w-16 bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:bg-gradient-to-br dark:focus:ring-green-800 shadow-lg dark:shadow-lg dark:shadow-green-800/80 font-medium rounded-lg text-sm py-2 text-center mb-2"
+        @click="store.decky.theme.repos.push({ url: 'https://github.com/', folder: '' })"
+      >
+        Add
+      </button>
+    </div>
+    <div v-for="(repo, index) in store.decky.theme.repos" :key="index" class="grid gap-6 mb-6 grid-cols-[5fr_45fr_30fr_10fr]">
+      <span class="text-sm font-medium py-2.5 dark:text-white">URL:</span>
+      <input
+        :id="`decky_theme_repo_url-${index}`"
+        v-model="store.decky.theme.repos[index].url"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Repo"
+        required
+      />
+      <input
+        :id="`decky_theme_repo_folder-${index}`"
+        v-model="store.decky.theme.repos[index].folder"
+        type="text"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Folder"
+        required
+      />
+      <div>
+        <button
+          type="button"
+          class="text-white h-full w-full bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br dark:focus:ring-purple-800 shadow-lg dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm py-2.5 text-center mb-2"
+          @click="store.decky.theme.repos.splice(index, 1)"
+        >
+          Delete
+        </button>
       </div>
     </div>
 

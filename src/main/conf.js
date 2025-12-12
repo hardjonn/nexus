@@ -27,6 +27,12 @@ const defaultConfig = {
   emulation: {
     path: '~/Games/Emulation',
   },
+  decky: {
+    theme: {
+      path: '/home/deck/homebrew/themes',
+      repos: [],
+    },
+  },
   backup: {
     remote_location: '~/Backup/Location',
     local_locations: [{ path: '~/Backup/Location', exclude: "{'*.txt','dir3','dir4'}", extra: '--dry-run' }],
@@ -145,6 +151,35 @@ const schema = {
         },
       },
     },
+    decky: {
+      type: 'object',
+      properties: {
+        theme: {
+          type: 'object',
+          properties: {
+            path: {
+              type: 'string',
+              default: '/home/deck/homebrew/themes',
+            },
+            repos: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                  },
+                  folder: {
+                    type: 'string',
+                  },
+                },
+              },
+              default: [],
+            },
+          },
+        },
+      },
+    },
     backup: {
       type: 'object',
       properties: {
@@ -214,6 +249,7 @@ function saveConfig(configData) {
   conf.set('local_lib', configData.local_lib);
   conf.set('port_proton', configData.port_proton);
   conf.set('emulation', configData.emulation);
+  conf.set('decky', configData.decky);
   conf.set('backup', configData.backup);
 
   return true;
@@ -227,6 +263,7 @@ function getConfig() {
     local_lib: conf.get('local_lib'),
     port_proton: conf.get('port_proton'),
     emulation: conf.get('emulation'),
+    decky: conf.get('decky'),
     backup: conf.get('backup'),
     app: conf.get('app'),
   };

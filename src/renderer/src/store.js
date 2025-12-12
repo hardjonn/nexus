@@ -28,6 +28,14 @@ const store = reactive({
     path: '',
   },
 
+  // decky config
+  decky: {
+    theme: {
+      path: '',
+      repos: [],
+    },
+  },
+
   // local config
   local_lib: {
     games_path: [{ label: 'SSD', path: 'Games' }],
@@ -60,6 +68,7 @@ window.confAPI.getConfig().then((config) => {
   store.remote_lib = config.remote_lib;
   store.port_proton = config.port_proton;
   store.emulation = config.emulation;
+  store.decky = config.decky;
   store.local_lib = config.local_lib;
   store.backup = config.backup;
   store.app = config.app;
