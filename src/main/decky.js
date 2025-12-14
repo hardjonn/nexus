@@ -132,7 +132,7 @@ async function cloneRepoIntoTargetLocalFolder(themeBasePath, repoUrl, repoFolder
 
   // we need to clone the repo into a temp folder first
   // and then move it to the target folder
-  const tempDirFullPath = path.resolve('/tmp/decky-theme');
+  const tempDirFullPath = path.resolve('/home/deck/tmp/decky-theme');
   const sourcePath = path.join(tempDirFullPath, repoFolder);
   const targetPath = path.resolve(themeBasePath, repoFolder);
   console.log('decky::cloneRepoIntoTargetLocalFolder: tempDirFullPath', tempDirFullPath);
