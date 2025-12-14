@@ -99,6 +99,10 @@ async function runPostDownloadActions(gameItem) {
       await runPostDownloadAction_PortProton(config, gameItem);
     }
 
+    if (gameItem.launcher === 'NOOP') {
+      await runPostDownloadAction_NOOP(config, gameItem);
+    }
+
     if (gameItem.launcher === 'PS2') {
       await runPostDownloadAction_PS2(config, gameItem);
     }
@@ -147,6 +151,20 @@ async function runPostDownloadAction_PortProton(config, gameItem) {
     fs.chmodSync(portProtonScriptLocation, 0o755);
   } catch (error) {
     console.error('games::runPostDownloadAction_PortProton: Error running post download action for Port Proton:', error);
+    throw error;
+  }
+}
+async function runPostDownloadAction_NOOP(config, gameItem) {
+  console.log('games::runPostDownloadAction_NOOP: Running post download actions for noop');
+
+  try {
+    const launcherTargetFullPath = path.join(gameItem.realLocalGamePath, gameItem.launcherTarget);
+    console.log('games::runPostDownloadAction_NOOP: Launcher Target Full Path:', launcherTargetFullPath);
+
+    // add execute permissions
+    fs.chmodSync(launcherTargetFullPath, 0o755);
+  } catch (error) {
+    console.error('games::runPostDownloadAction_NOOP: Error running post download action for NOOP:', error);
     throw error;
   }
 }
