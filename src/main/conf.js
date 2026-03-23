@@ -6,7 +6,7 @@ const defaultConfig = {
     user_name: '',
     user_config_path: '',
     shortcuts_filename: 'shortcuts.vdf',
-    binding_icons_path: '~/.local/share/Steam/steam/tenfoot/resource/images/library/controller/binding_icons',
+    binding_icons_path: '~/.local/share/Steam/tenfoot/resource/images/library/controller/binding_icons',
   },
   remote_lib: {
     host: 'nexus.host',
@@ -73,7 +73,7 @@ const schema = {
         },
         binding_icons_path: {
           type: 'string',
-          default: '~/.local/share/Steam/steam/tenfoot/resource/images/library/controller/binding_icons',
+          default: '~/.local/share/Steam/tenfoot/resource/images/library/controller/binding_icons',
         },
       },
     },
