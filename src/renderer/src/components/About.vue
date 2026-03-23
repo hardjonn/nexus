@@ -3,7 +3,7 @@ import { reactive, computed, watch } from 'vue';
 import { error } from '../error.js';
 import { progress } from '../progress.js';
 import { getCurrentVersion, checkForUpdates, downloadUpdate, installUpdate } from '../update.js';
-import { addDesktopEntry } from '../integration.js';
+import { addDesktopEntry, installBindingIcons } from '../integration.js';
 
 const processingActions = {
   gettingCurrentVersion: 'Getting current version...',
