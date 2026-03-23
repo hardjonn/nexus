@@ -7,6 +7,7 @@ const store = reactive({
     user_name: '',
     user_config_path: '',
     shortcuts_filename: 'shortcuts.vdf',
+    binding_icons_path: '~/.local/share/Steam/steam/tenfoot/resource/images/library/controller/binding_icons',
   },
 
   // remote config

@@ -2,6 +2,8 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
 
+import { getConfig } from './conf';
+
 // currently supported only on Linux in the AppImage mode
 async function addDesktopEntry() {
   try {
@@ -84,4 +86,33 @@ async function addDesktopEntry() {
   }
 }
 
-export { addDesktopEntry };
+async function installBindingIcons() {
+  try {
+    console.log('integration::installBindingIcons: installing binding icons');
+    const conf = getConfig();
+    const bindingIconsPath = conf.steam.binding_icons_path;
+    console.log('integration::installBindingIcons: bindingIconsPath', bindingIconsPath);
+
+    // get binding_icons from the resources folder
+    const bindingIconsResourcePath = path.resolve(__dirname, '../../resources/binding_icons');
+    console.log('integration::installBindingIcons: bindingIconsResourcePath', bindingIconsResourcePath);
+
+    // copy all the files from the binding_icons folder to the binding_icons_path with overwrite
+    fs.copySync(bindingIconsResourcePath, bindingIconsPath, { overwrite: true });
+
+    return {
+      status: 'success',
+      message: 'Binding icons installation completed',
+    };
+  } catch (error) {
+    console.error('Error installing binding icons:', error);
+    return {
+      status: 'error',
+      error: {
+        message: error.message,
+      },
+    };
+  }
+}
+
+export { addDesktopEntry, installBindingIcons };

@@ -2,4 +2,8 @@ function addDesktopEntry() {
   return window.integrationAPI.addDesktopEntry();
 }
 
-export { addDesktopEntry };
+function installBindingIcons() {
+  return window.integrationAPI.installBindingIcons();
+}
+
+export { addDesktopEntry, installBindingIcons };

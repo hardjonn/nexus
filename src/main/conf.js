@@ -6,6 +6,7 @@ const defaultConfig = {
     user_name: '',
     user_config_path: '',
     shortcuts_filename: 'shortcuts.vdf',
+    binding_icons_path: '~/.local/share/Steam/steam/tenfoot/resource/images/library/controller/binding_icons',
   },
   remote_lib: {
     host: 'nexus.host',
@@ -69,6 +70,10 @@ const schema = {
         shortcuts_filename: {
           type: 'string',
           default: 'shortcuts.vdf',
+        },
+        binding_icons_path: {
+          type: 'string',
+          default: '~/.local/share/Steam/steam/tenfoot/resource/images/library/controller/binding_icons',
         },
       },
     },
@@ -242,6 +247,11 @@ const schema = {
 
 const conf = new Conf({ schema: schema, defaults: defaultConfig });
 
+// make sure the default values are set for binding_icons_path
+if (!conf.get('steam.binding_icons_path')) {
+  conf.set('steam.binding_icons_path', defaultConfig.steam.binding_icons_path);
+}
+
 function saveConfig(configData) {
   console.log('conf::saveConfig', configData);
   conf.set('steam', configData.steam);
@@ -257,6 +267,7 @@ function saveConfig(configData) {
 
 function getConfig() {
   console.log('conf::getConfig');
+  console.log(conf.get('steam'));
   return {
     steam: conf.get('steam'),
     remote_lib: conf.get('remote_lib'),

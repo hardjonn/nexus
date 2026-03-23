@@ -110,6 +110,17 @@ const saveOptions = () => {
           {{ vdfFullPath }}
         </div>
       </div>
+      <div>
+        <label for="steam_binding_icons_path" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Steam Binding Icons Path</label>
+        <input
+          id="steam_binding_icons_path"
+          v-model="store.steam.binding_icons_path"
+          type="text"
+          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="~/.local/share/Steam/steam/tenfoot/resource/images/library/controller/binding_icons"
+          required
+        />
+      </div>
     </div>
 
     <h2 class="block w-full mt-8 mb-6 text-3xl font-bold dark:text-white">

@@ -82,6 +82,7 @@ const updateAPI = {
 
 const integrationAPI = {
   addDesktopEntry: () => electronAPI.ipcRenderer.invoke('integration/add_desktop_entry'),
+  installBindingIcons: () => electronAPI.ipcRenderer.invoke('integration/install_binding_icons'),
 };
 
 const deckyAPI = {

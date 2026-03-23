@@ -11,6 +11,7 @@ const processingActions = {
   downloadingUpdate: 'Downloading update...',
   installingUpdate: 'Installing update...',
   integrating: 'Integrating...',
+  installingBindingIcons: 'Installing binding icons...',
 };
 
 const data = reactive({
@@ -168,6 +169,26 @@ async function onActionAddDesktopEntry() {
   }
 }
 
+async function onActionInstallBindingIcons() {
+  activateProcessingAction(processingActions.installingBindingIcons);
+
+  try {
+    const response = await installBindingIcons();
+
+    if (response.status !== 'success') {
+      data.errorMessage = response.error.message;
+      return;
+    }
+
+    data.successMessage = 'Binding icons installed';
+  } catch (error) {
+    console.error('Error installing binding icons:', error);
+    data.errorMessage = 'An error occurred while installing binding icons: ' + error.message;
+  } finally {
+    data.processingAction = null;
+  }
+}
+
 const isUpdateAvailable = computed(() => {
   return data.updateCheckResult && data.updateCheckResult.isUpdateAvailable;
 });
@@ -314,7 +335,7 @@ onActionGetCurrentVersion();
         <textarea class="p-2.5 dark:bg-gray-700 dark:text-white w-full h-70" readonly :value="data.desktopEntryContent" />
       </div>
 
-      <div class="flex items-center justify-start w-full mt-8">
+      <div class="grid gap-6 mb-6 md:grid-cols-2 mt-8">
         <button
           type="button"
           class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
@@ -322,6 +343,14 @@ onActionGetCurrentVersion();
           @click="onActionAddDesktopEntry"
         >
           Add/Update Desktop Entry
+        </button>
+        <button
+          type="button"
+          class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+          :disabled="data.processingAction"
+          @click="onActionInstallBindingIcons"
+        >
+          Install Binding Icons
         </button>
       </div>
     </div>

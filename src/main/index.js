@@ -6,7 +6,7 @@ const { default: installExtension, VUEJS_DEVTOOLS } = require('electron-devtools
 import { getConfigApp_WindowBounds, saveConfigApp_WindowBounds, saveConfigApp_ActiveTab, getConfig, saveConfig } from './conf';
 import { backupPrefixes, backupCustomLocation, abortBackupTransfer, backupAllCustomLocations } from './backup';
 import { checkForUpdates, getCurrentVersion, downloadUpdate, installUpdate } from './update';
-import { addDesktopEntry } from './integration';
+import { addDesktopEntry, installBindingIcons } from './integration';
 import { getDeckyThemes, updateDeckyTheme, installDeckyTheme } from './decky';
 import {
   getGames,
@@ -312,6 +312,11 @@ ipcMain.handle('update/install', async () => {
 ipcMain.handle('integration/add_desktop_entry', async () => {
   console.log('integration/add_desktop_entry');
   return await addDesktopEntry();
+});
+
+ipcMain.handle('integration/install_binding_icons', async () => {
+  console.log('integration/install_binding_icons');
+  return await installBindingIcons();
 });
 
 ipcMain.handle('decky/get_themes', async () => {
