@@ -93,9 +93,23 @@ async function installBindingIcons() {
     const bindingIconsPath = conf.steam.binding_icons_path;
     console.log('integration::installBindingIcons: bindingIconsPath', bindingIconsPath);
 
+    // check if folder exists - if it does not exist raise an error
+    if (!fs.existsSync(bindingIconsPath)) {
+      throw new Error(`Binding icons path does not exist: ${bindingIconsPath}`);
+    }
+
     // get binding_icons from the resources folder
     const bindingIconsResourcePath = path.resolve(__dirname, '../../resources/binding_icons');
     console.log('integration::installBindingIcons: bindingIconsResourcePath', bindingIconsResourcePath);
+
+    // check if binding_icons folder exists in the resources folder
+    if (!fs.existsSync(bindingIconsResourcePath)) {
+      throw new Error(`Binding icons resource path does not exist: ${bindingIconsResourcePath}`);
+    }
+
+    // get all the icons the resource folder contains
+    const bindingIcons = fs.readdirSync(bindingIconsResourcePath);
+    console.log('integration::installBindingIcons: bindingIcons', bindingIcons);
 
     // copy all the files from the binding_icons folder to the binding_icons_path with overwrite
     fs.copySync(bindingIconsResourcePath, bindingIconsPath, { overwrite: true });
