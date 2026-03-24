@@ -111,8 +111,17 @@ async function installBindingIcons() {
     const bindingIcons = fs.readdirSync(bindingIconsResourcePath);
     console.log('integration::installBindingIcons: bindingIcons', bindingIcons);
 
-    // copy all the files from the binding_icons folder to the binding_icons_path with overwrite
-    fs.copySync(bindingIconsResourcePath, bindingIconsPath, { overwrite: true });
+    // attempt to copy the whole folder using copySync wont work
+    // this copy every icon individually using read file and write file operations
+    bindingIcons.forEach((icon) => {
+      const srcFile = path.join(bindingIconsResourcePath, icon);
+      const destFile = path.join(bindingIconsPath, icon);
+
+      // Use readFileSync + writeFileSync to bypass ASAR copy limitations
+      const data = fs.readFileSync(srcFile);
+      fs.writeFileSync(destFile, data);
+      console.log(`integration::installBindingIcons: Copied ${icon} to ${destFile}`);
+    });
 
     return {
       status: 'success',
