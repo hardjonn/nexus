@@ -80,7 +80,11 @@ async function uploadWithRsync({ abortId, sourcePath, destinationPath, host, use
       'ServerAliveInterval=10',
     ].join(' ');
 
-    const rsyncArguments = ['-avzh', '--delete', '--info=progress2'];
+    // Never delete remote content during an upload: the remote is the backup
+    // target, so a missing local file must not remove its remote copy. Owner,
+    // group, and directory timestamps cannot be set on the ACL-managed
+    // TrueNAS dataset, so those parts of archive mode are disabled.
+    const rsyncArguments = ['-avzh', '--no-owner', '--no-group', '--omit-dir-times', '--info=progress2'];
 
     if (exclude) {
       const excludeList = exclude.split(';');
